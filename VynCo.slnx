@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/VynCo/VynCo.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/VynCo.Tests/VynCo.Tests.csproj" />
+  </Folder>
+</Solution>

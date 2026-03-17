@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net10.0</TargetFrameworks>
+    <LangVersion>12.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>VynCo</RootNamespace>
+
+    <!-- NuGet package metadata -->
+    <PackageId>VynCo</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>VynCo</Authors>
+    <Company>VynCo</Company>
+    <Description>.NET SDK for the VynCo Swiss Corporate Intelligence API</Description>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageProjectUrl>https://vynco.ch</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/VynCorp/vc-dotnet</RepositoryUrl>
+    <PackageTags>vynco;swiss;corporate;intelligence;api;zefix</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="/" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Net.Http.Json" Version="8.0.1" Condition="'$(TargetFramework)' == 'netstandard2.0'" />
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+  </ItemGroup>
+
+  <!-- netstandard2.0 needs polyfills -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="8.0.0" />
+  </ItemGroup>
+
+</Project>
