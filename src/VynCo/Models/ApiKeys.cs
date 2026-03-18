@@ -6,9 +6,11 @@ public class ApiKey
 {
     [JsonPropertyName("id")] public Guid Id { get; set; }
     [JsonPropertyName("name")] public string Name { get; set; } = "";
-    [JsonPropertyName("keyPrefix")] public string KeyPrefix { get; set; } = "";
-    [JsonPropertyName("keyHint")] public string KeyHint { get; set; } = "";
-    [JsonPropertyName("permissions")] public List<string> Permissions { get; set; } = new();
+    [JsonPropertyName("prefix")] public string? Prefix { get; set; }
+    [JsonPropertyName("keyPrefix")] public string? KeyPrefix { get; set; }
+    [JsonPropertyName("keyHint")] public string? KeyHint { get; set; }
+    [JsonPropertyName("isTestKey")] public bool IsTestKey { get; set; }
+    [JsonPropertyName("permissions")] public List<string>? Permissions { get; set; }
     [JsonPropertyName("isActive")] public bool IsActive { get; set; }
     [JsonPropertyName("lastUsedAt")] public DateTime? LastUsedAt { get; set; }
     [JsonPropertyName("createdAt")] public DateTime CreatedAt { get; set; }
@@ -19,17 +21,19 @@ public class ApiKeyCreated
 {
     [JsonPropertyName("id")] public Guid Id { get; set; }
     [JsonPropertyName("name")] public string Name { get; set; } = "";
-    [JsonPropertyName("keyPrefix")] public string KeyPrefix { get; set; } = "";
-    [JsonPropertyName("keyHint")] public string KeyHint { get; set; } = "";
-    [JsonPropertyName("permissions")] public List<string> Permissions { get; set; } = new();
+    [JsonPropertyName("prefix")] public string? Prefix { get; set; }
+    [JsonPropertyName("keyPrefix")] public string? KeyPrefix { get; set; }
+    [JsonPropertyName("keyHint")] public string? KeyHint { get; set; }
+    [JsonPropertyName("key")] public string? Key { get; set; }
+    [JsonPropertyName("rawKey")] public string? RawKey { get; set; }
+    [JsonPropertyName("isTestKey")] public bool IsTestKey { get; set; }
+    [JsonPropertyName("permissions")] public List<string>? Permissions { get; set; }
     [JsonPropertyName("isActive")] public bool IsActive { get; set; }
     [JsonPropertyName("createdAt")] public DateTime CreatedAt { get; set; }
-    [JsonPropertyName("rawKey")] public string RawKey { get; set; } = "";
 }
 
 public class CreateApiKeyRequest
 {
     [JsonPropertyName("name")] public string Name { get; set; } = "";
     [JsonPropertyName("isTestKey")] public bool IsTestKey { get; set; }
-    [JsonPropertyName("permissions")] public List<string>? Permissions { get; set; }
 }

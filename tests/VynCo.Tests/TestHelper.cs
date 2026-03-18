@@ -16,7 +16,7 @@ public static class TestHelper
         var newHttp = new HttpClient(handler) { BaseAddress = new Uri(baseUrl) };
         newHttp.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", "vc_test_key");
-        newHttp.DefaultRequestHeaders.UserAgent.ParseAdd("vynco-dotnet/0.1.0");
+        newHttp.DefaultRequestHeaders.UserAgent.ParseAdd($"vynco-dotnet/{VynCoClient.SdkVersion}");
         newHttp.DefaultRequestHeaders.Accept.Add(
             new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
         field.SetValue(client, newHttp);

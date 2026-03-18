@@ -43,10 +43,22 @@ public class VynCoClientTests
 
         await client.Companies.GetAsync("CHE-123.456.789");
 
-        Assert.Contains("vynco-dotnet/0.1.0", handler.LastRequest!.Headers.UserAgent.ToString());
+        Assert.Contains($"vynco-dotnet/{VynCoClient.SdkVersion}", handler.LastRequest!.Headers.UserAgent.ToString());
     }
 
     // -- Exception mapping tests --
+
+    [Fact]
+    public async Task Request_400_ThrowsBadRequestException()
+    {
+        var handler = new MockHttpHandler(HttpStatusCode.BadRequest,
+            """{"type":"about:blank","title":"Bad Request","status":400,"detail":"Invalid query parameter"}""");
+        using var client = TestHelper.CreateClient(handler);
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => client.Companies.SearchAsync(new CompanySearchRequest { Query = "a" }));
+        Assert.Equal(400, ex.StatusCode);
+    }
 
     [Fact]
     public async Task Request_401_ThrowsAuthenticationException()
@@ -71,6 +83,18 @@ public class VynCoClientTests
         var ex = await Assert.ThrowsAsync<InsufficientCreditsException>(
             () => client.Companies.GetAsync("CHE-123.456.789"));
         Assert.Equal(402, ex.StatusCode);
+    }
+
+    [Fact]
+    public async Task Request_403_ThrowsForbiddenException()
+    {
+        var handler = new MockHttpHandler(HttpStatusCode.Forbidden,
+            """{"type":"about:blank","title":"Forbidden","status":403,"detail":"Insufficient permissions"}""");
+        using var client = TestHelper.CreateClient(handler);
+
+        var ex = await Assert.ThrowsAsync<ForbiddenException>(
+            () => client.Teams.ListMembersAsync());
+        Assert.Equal(403, ex.StatusCode);
     }
 
     [Fact]
@@ -136,6 +160,37 @@ public class VynCoClientTests
         Assert.Equal("abc-123", ex.Body.TraceId);
     }
 
+    // -- Response headers tests --
+
+    [Fact]
+    public async Task Request_CapturesResponseHeaders()
+    {
+        var handler = new MockHttpHandler(req =>
+        {
+            var resp = new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""{"uid":"CHE-123.456.789","name":"Test AG"}""",
+                    System.Text.Encoding.UTF8, "application/json")
+            };
+            resp.Headers.Add("X-Request-Id", "req-abc-123");
+            resp.Headers.Add("X-Credits-Used", "1");
+            resp.Headers.Add("X-Credits-Remaining", "49999");
+            resp.Headers.Add("X-Rate-Limit-Limit", "300");
+            resp.Headers.Add("X-Data-Source", "Zefix / Federal Commercial Registry Office (EHRA)");
+            return resp;
+        });
+        using var client = TestHelper.CreateClient(handler);
+
+        await client.Companies.GetAsync("CHE-123.456.789");
+
+        Assert.NotNull(client.LastResponseHeaders);
+        Assert.Equal("req-abc-123", client.LastResponseHeaders!.RequestId);
+        Assert.Equal(1, client.LastResponseHeaders.CreditsUsed);
+        Assert.Equal(49999, client.LastResponseHeaders.CreditsRemaining);
+        Assert.Equal(300, client.LastResponseHeaders.RateLimitLimit);
+        Assert.Contains("Zefix", client.LastResponseHeaders.DataSource);
+    }
+
     // -- Companies resource tests --
 
     [Fact]
@@ -156,12 +211,12 @@ public class VynCoClientTests
     [Fact]
     public async Task Companies_Get_CorrectUrl()
     {
-        var handler = new MockHttpHandler(HttpStatusCode.OK, """{"uid":"CHE-123.456.789","name":"Test AG","auditorCategory":"","createdAt":"2024-01-01T00:00:00Z","updatedAt":"2024-01-01T00:00:00Z"}""");
+        var handler = new MockHttpHandler(HttpStatusCode.OK, """{"uid":"CHE-123.456.789","name":"Test AG","createdAt":"2024-01-01T00:00:00Z","updatedAt":"2024-01-01T00:00:00Z"}""");
         using var client = TestHelper.CreateClient(handler);
 
         await client.Companies.GetAsync("CHE-123.456.789");
 
-        Assert.EndsWith("/v1/companies/CHE-123.456.789", handler.LastRequest!.RequestUri!.ToString());
+        Assert.EndsWith("/api/v1/companies/CHE-123.456.789", handler.LastRequest!.RequestUri!.ToString());
     }
 
     [Fact]
@@ -182,7 +237,7 @@ public class VynCoClientTests
     [Fact]
     public async Task Companies_List_ParsesPagedResponse()
     {
-        var json = """{"items":[{"uid":"CHE-111.222.333","name":"Foo GmbH","auditorCategory":"None","isActive":true,"createdAt":"2024-01-01T00:00:00Z","updatedAt":"2024-01-01T00:00:00Z"}],"totalCount":1,"page":1,"pageSize":25,"totalPages":1,"hasPreviousPage":false,"hasNextPage":false}""";
+        var json = """{"items":[{"uid":"CHE-111.222.333","name":"Foo GmbH","isActive":true,"createdAt":"2024-01-01T00:00:00Z","updatedAt":"2024-01-01T00:00:00Z"}],"totalCount":1,"page":1,"pageSize":25,"totalPages":1,"hasPreviousPage":false,"hasNextPage":false}""";
         var handler = new MockHttpHandler(HttpStatusCode.OK, json);
         using var client = TestHelper.CreateClient(handler);
 
@@ -197,7 +252,7 @@ public class VynCoClientTests
     [Fact]
     public async Task Companies_Search_SendsPostBody()
     {
-        var json = """[{"uid":"CHE-111.222.333","name":"Acme AG","auditorCategory":"","isActive":true,"createdAt":"2024-01-01T00:00:00Z","updatedAt":"2024-01-01T00:00:00Z"}]""";
+        var json = """[{"uid":"CHE-111.222.333","name":"Acme AG","isActive":true,"createdAt":"2024-01-01T00:00:00Z","updatedAt":"2024-01-01T00:00:00Z"}]""";
         var handler = new MockHttpHandler(HttpStatusCode.OK, json);
         using var client = TestHelper.CreateClient(handler);
 
@@ -232,12 +287,40 @@ public class VynCoClientTests
         Assert.Equal(50000, stats.CantonCounts["ZH"]);
     }
 
+    [Fact]
+    public async Task Companies_Compare_SendsRequest()
+    {
+        var handler = new MockHttpHandler(HttpStatusCode.OK, """{"companies":[]}""");
+        using var client = TestHelper.CreateClient(handler);
+
+        var result = await client.Companies.CompareAsync(
+            new CompanyCompareRequest { Uids = new List<string> { "CHE-123.456.789", "CHE-987.654.321" } });
+
+        Assert.Equal(HttpMethod.Post, handler.LastRequest!.Method);
+        Assert.Contains("/api/v1/companies/compare", handler.LastRequest.RequestUri!.ToString());
+        Assert.Contains("CHE-123.456.789", handler.LastRequestBody);
+    }
+
+    [Fact]
+    public async Task Companies_GetRelationships_ReturnsRelationships()
+    {
+        var json = """{"companyUid":"CHE-123.456.789","total":2,"relationships":[{"id":"00000000-0000-0000-0000-000000000001","sourceCompanyUid":"CHE-123.456.789","sourceCompanyName":"Parent AG","targetCompanyUid":"CHE-111.222.333","targetCompanyName":"Child GmbH","relationshipType":"Subsidiary","dataSource":"Zefix","isActive":true}]}""";
+        var handler = new MockHttpHandler(HttpStatusCode.OK, json);
+        using var client = TestHelper.CreateClient(handler);
+
+        var result = await client.Companies.GetRelationshipsAsync("CHE-123.456.789");
+
+        Assert.Equal("CHE-123.456.789", result.CompanyUid);
+        Assert.Single(result.Relationships);
+        Assert.Equal("Subsidiary", result.Relationships[0].RelationshipType);
+    }
+
     // -- Changes resource tests --
 
     [Fact]
     public async Task Changes_GetByCompany_ReturnsChanges()
     {
-        var json = """[{"id":"00000000-0000-0000-0000-000000000001","companyUid":"CHE-123.456.789","changeType":"AuditorChange","detectedAt":"2024-06-01T00:00:00Z","isReviewed":false,"isFlagged":false}]""";
+        var json = """[{"id":"00000000-0000-0000-0000-000000000001","companyUid":"CHE-123.456.789","companyName":"Test AG","changeType":"AuditorChange","detectedAt":"2024-06-01T00:00:00Z","isReviewed":false,"isFlagged":false}]""";
         var handler = new MockHttpHandler(HttpStatusCode.OK, json);
         using var client = TestHelper.CreateClient(handler);
 
@@ -245,6 +328,20 @@ public class VynCoClientTests
 
         Assert.Single(changes);
         Assert.Equal("AuditorChange", changes[0].ChangeType);
+        Assert.Equal("Test AG", changes[0].CompanyName);
+    }
+
+    [Fact]
+    public async Task Changes_GetBySogcId_ReturnsChanges()
+    {
+        var json = """[{"id":"00000000-0000-0000-0000-000000000001","companyUid":"CHE-123.456.789","changeType":"NameChange","sogcId":"HR02-1234567","detectedAt":"2024-06-01T00:00:00Z","isReviewed":false,"isFlagged":false}]""";
+        var handler = new MockHttpHandler(HttpStatusCode.OK, json);
+        using var client = TestHelper.CreateClient(handler);
+
+        var changes = await client.Changes.GetBySogcIdAsync("HR02-1234567");
+
+        Assert.Single(changes);
+        Assert.Contains("/api/v1/changes/sogc/HR02-1234567", handler.LastRequest!.RequestUri!.ToString());
     }
 
     // -- Credits resource tests --
@@ -269,12 +366,12 @@ public class VynCoClientTests
     public async Task ApiKeys_Create_SendsRequest()
     {
         var handler = new MockHttpHandler(HttpStatusCode.Created,
-            """{"id":"00000000-0000-0000-0000-000000000001","name":"My Key","keyPrefix":"vc_live_","keyHint":"abc...xyz","permissions":["read"],"isActive":true,"createdAt":"2024-01-01T00:00:00Z","rawKey":"vc_live_abc123def456"}""");
+            """{"id":"00000000-0000-0000-0000-000000000001","name":"My Key","prefix":"vc_live_","isTestKey":false,"isActive":true,"createdAt":"2024-01-01T00:00:00Z","key":"vc_live_abc123def456"}""");
         using var client = TestHelper.CreateClient(handler);
 
         var created = await client.ApiKeys.CreateAsync(new CreateApiKeyRequest { Name = "My Key", IsTestKey = false });
 
-        Assert.Equal("vc_live_abc123def456", created.RawKey);
+        Assert.Equal("vc_live_abc123def456", created.Key);
         Assert.Equal("My Key", created.Name);
         Assert.Contains("\"name\":\"My Key\"", handler.LastRequestBody);
     }
@@ -295,67 +392,186 @@ public class VynCoClientTests
         Assert.Equal(250000, team.CreditBalance);
     }
 
-    // -- Dispose tests --
+    [Fact]
+    public async Task Teams_ListMembers_ReturnsList()
+    {
+        var json = """[{"id":"00000000-0000-0000-0000-000000000001","name":"John Doe","email":"john@example.com","role":"Admin","isActive":true}]""";
+        var handler = new MockHttpHandler(HttpStatusCode.OK, json);
+        using var client = TestHelper.CreateClient(handler);
+
+        var members = await client.Teams.ListMembersAsync();
+
+        Assert.Single(members);
+        Assert.Equal("John Doe", members[0].Name);
+        Assert.Equal("Admin", members[0].Role);
+        Assert.Contains("/api/v1/teams/me/members", handler.LastRequest!.RequestUri!.ToString());
+    }
 
     [Fact]
-    public void Dispose_CanBeCalledMultipleTimes()
+    public async Task Teams_InviteMember_SendsRequest()
     {
-        var client = new VynCoClient("vc_test_key");
-        client.Dispose();
-        client.Dispose(); // should not throw
+        var handler = new MockHttpHandler(HttpStatusCode.Created,
+            """{"id":"00000000-0000-0000-0000-000000000002","name":"Jane","email":"jane@example.com","role":"Member","isActive":false}""");
+        using var client = TestHelper.CreateClient(handler);
+
+        var member = await client.Teams.InviteMemberAsync(
+            new InviteMemberRequest { Email = "jane@example.com", Name = "Jane", Role = "Member" });
+
+        Assert.Equal("jane@example.com", member.Email);
+        Assert.Contains("jane@example.com", handler.LastRequestBody);
+    }
+
+    [Fact]
+    public async Task Teams_BillingSummary_ReturnsSummary()
+    {
+        var handler = new MockHttpHandler(HttpStatusCode.OK,
+            """{"members":[{"memberName":"John","creditsUsed":500,"percentage":100.0}],"totalCreditsUsed":500,"period":"2024-06"}""");
+        using var client = TestHelper.CreateClient(handler);
+
+        var summary = await client.Teams.BillingSummaryAsync();
+
+        Assert.Equal(500, summary.TotalCreditsUsed);
+        Assert.Single(summary.Members);
+        Assert.Contains("/api/v1/teams/me/billing-summary", handler.LastRequest!.RequestUri!.ToString());
+    }
+
+    // -- Watches resource tests --
+
+    [Fact]
+    public async Task Watches_List_ReturnsList()
+    {
+        var json = """[{"id":"00000000-0000-0000-0000-000000000001","companyUid":"CHE-123.456.789","companyName":"Test AG","channel":"InApp","watchedChangeTypes":["NameChange"],"createdAt":"2024-01-01T00:00:00Z"}]""";
+        var handler = new MockHttpHandler(HttpStatusCode.OK, json);
+        using var client = TestHelper.CreateClient(handler);
+
+        var watches = await client.Watches.ListAsync();
+
+        Assert.Single(watches);
+        Assert.Equal("CHE-123.456.789", watches[0].CompanyUid);
+        Assert.Contains("/api/v1/watches", handler.LastRequest!.RequestUri!.ToString());
+    }
+
+    [Fact]
+    public async Task Watches_Add_SendsRequest()
+    {
+        var handler = new MockHttpHandler(HttpStatusCode.Created,
+            """{"id":"00000000-0000-0000-0000-000000000001","companyUid":"CHE-123.456.789","companyName":"Test AG","channel":"InApp","watchedChangeTypes":[],"createdAt":"2024-01-01T00:00:00Z"}""");
+        using var client = TestHelper.CreateClient(handler);
+
+        var watch = await client.Watches.AddAsync(new AddWatchRequest { CompanyUid = "CHE-123.456.789" });
+
+        Assert.Equal("CHE-123.456.789", watch.CompanyUid);
+        Assert.Equal(HttpMethod.Post, handler.LastRequest!.Method);
+    }
+
+    [Fact]
+    public async Task Watches_ListNotifications_ReturnsList()
+    {
+        var json = """[{"id":"00000000-0000-0000-0000-000000000001","companyUid":"CHE-123.456.789","companyName":"Test AG","changeId":"00000000-0000-0000-0000-000000000002","changeType":"NameChange","summary":"Name changed","channel":"InApp","status":"sent","createdAt":"2024-01-01T00:00:00Z"}]""";
+        var handler = new MockHttpHandler(HttpStatusCode.OK, json);
+        using var client = TestHelper.CreateClient(handler);
+
+        var notifications = await client.Watches.ListNotificationsAsync();
+
+        Assert.Single(notifications);
+        Assert.Equal("NameChange", notifications[0].ChangeType);
+    }
+
+    // -- Analytics resource tests --
+
+    [Fact]
+    public async Task Analytics_Cluster_SendsRequest()
+    {
+        var handler = new MockHttpHandler(HttpStatusCode.OK, """{"clusters":[],"inertia":0.0}""");
+        using var client = TestHelper.CreateClient(handler);
+
+        await client.Analytics.ClusterAsync(new ClusteringRequest { K = 3, Canton = "ZH" });
+
+        Assert.Equal(HttpMethod.Post, handler.LastRequest!.Method);
+        Assert.Contains("/api/v1/analytics/cluster", handler.LastRequest.RequestUri!.ToString());
+        Assert.Contains("\"k\":3", handler.LastRequestBody);
+    }
+
+    [Fact]
+    public async Task Analytics_Velocity_BuildsQuery()
+    {
+        var handler = new MockHttpHandler(HttpStatusCode.OK, """{"data":[]}""");
+        using var client = TestHelper.CreateClient(handler);
+
+        await client.Analytics.VelocityAsync(new VelocityParams { Days = 7 });
+
+        var uri = handler.LastRequest!.RequestUri!.ToString();
+        Assert.Contains("/api/v1/analytics/velocity", uri);
+        Assert.Contains("days=7", uri);
+    }
+
+    // -- Health resource tests --
+
+    [Fact]
+    public async Task Health_Check_ReturnsStatus()
+    {
+        var handler = new MockHttpHandler(HttpStatusCode.OK,
+            """{"status":"Healthy","uptime":"3d 12h","checks":[{"name":"Database","status":"Healthy","durationMs":5}]}""");
+        using var client = TestHelper.CreateClient(handler);
+
+        var health = await client.Health.CheckAsync();
+
+        Assert.Equal("Healthy", health.Status);
+        Assert.Single(health.Checks);
+        Assert.Equal("Database", health.Checks[0].Name);
+    }
+
+    // -- News resource tests --
+
+    [Fact]
+    public async Task News_GetRecent_ReturnsNews()
+    {
+        var handler = new MockHttpHandler(HttpStatusCode.OK,
+            """{"count":1,"items":[{"title":"Breaking news"}]}""");
+        using var client = TestHelper.CreateClient(handler);
+
+        var news = await client.News.GetRecentAsync(limit: 10);
+
+        Assert.Equal(1, news.Count);
+        Assert.Contains("/api/v1/news/recent?limit=10", handler.LastRequest!.RequestUri!.ToString());
     }
 
     // -- Dossiers resource tests --
 
     [Fact]
-    public async Task Dossiers_Generate_ReturnsAccepted()
+    public async Task Dossiers_Generate_ReturnsDossier()
     {
-        var handler = new MockHttpHandler(HttpStatusCode.Accepted,
-            """{"dossierId":"00000000-0000-0000-0000-000000000001","status":"pending"}""");
+        var handler = new MockHttpHandler(HttpStatusCode.OK,
+            """{"companyUid":"CHE-123.456.789","companyName":"Test AG","summary":"A test company","riskScore":0.3,"generatedAt":"2024-06-01T00:00:00Z","status":"completed"}""");
         using var client = TestHelper.CreateClient(handler);
 
-        var result = await client.Dossiers.GenerateAsync("CHE-123.456.789");
+        var result = await client.Dossiers.GenerateAsync("CHE-123.456.789",
+            new GenerateDossierRequest { Type = "comprehensive" });
 
-        Assert.Equal("pending", result.Status);
+        Assert.Equal("completed", result.Status);
+        Assert.Equal("Test AG", result.CompanyName);
         Assert.Equal(HttpMethod.Post, handler.LastRequest!.Method);
+        Assert.Contains("comprehensive", handler.LastRequestBody);
     }
 
     // -- Persons resource tests --
 
     [Fact]
-    public async Task Persons_Search_BuildsQuery()
+    public async Task Persons_List_BuildsQuery()
     {
-        var json = """[{"id":"00000000-0000-0000-0000-000000000001","fullName":"Hans Müller","roleCount":3,"activeRoleCount":2}]""";
+        var json = """[{"id":"00000000-0000-0000-0000-000000000001","name":"Hans Müller","roles":["CEO"],"companies":["Test AG"]}]""";
         var handler = new MockHttpHandler(HttpStatusCode.OK, json);
         using var client = TestHelper.CreateClient(handler);
 
-        var persons = await client.Persons.SearchAsync(new SearchPersonsParams { Query = "Müller", Limit = 10 });
+        var persons = await client.Persons.ListAsync(new ListPersonsParams { Search = "Müller", PageSize = 10 });
 
         Assert.Single(persons);
-        Assert.Equal("Hans Müller", persons[0].FullName);
+        Assert.Equal("Hans Müller", persons[0].Name);
         var uri = handler.LastRequest!.RequestUri!.ToString();
+        Assert.Contains("pageSize=10", uri);
         Assert.True(
-            uri.Contains("q=M%C3%BCller") || uri.Contains("q=Müller"),
+            uri.Contains("search=M%C3%BCller") || uri.Contains("search=Müller"),
             $"Expected URI to contain encoded or literal umlaut, got: {uri}");
-    }
-
-    // -- Webhooks resource tests --
-
-    [Fact]
-    public async Task Webhooks_Create_SendsRequest()
-    {
-        var handler = new MockHttpHandler(HttpStatusCode.OK,
-            """{"id":"wh_1","url":"https://example.com/hook","events":["company.changed"],"secret":"whsec_abc123"}""");
-        using var client = TestHelper.CreateClient(handler);
-
-        var webhook = await client.Webhooks.CreateAsync(new CreateWebhookRequest
-        {
-            Url = "https://example.com/hook",
-            Events = new List<string> { "company.changed" }
-        });
-
-        Assert.Equal("whsec_abc123", webhook.Secret);
-        Assert.Contains("company.changed", handler.LastRequestBody);
     }
 
     // -- SyncStatus resource tests --
@@ -372,5 +588,15 @@ public class VynCoClientTests
         Assert.Single(statuses);
         Assert.Equal("completed", statuses[0].Status);
         Assert.Equal(320000, statuses[0].ItemsProcessed);
+    }
+
+    // -- Dispose tests --
+
+    [Fact]
+    public void Dispose_CanBeCalledMultipleTimes()
+    {
+        var client = new VynCoClient("vc_test_key");
+        client.Dispose();
+        client.Dispose(); // should not throw
     }
 }

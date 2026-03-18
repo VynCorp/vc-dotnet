@@ -16,6 +16,8 @@ public class VynCoClient : IDisposable
     private readonly int _maxRetries;
     private bool _disposed;
 
+    public const string SdkVersion = "1.0.0";
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = null,
@@ -23,11 +25,11 @@ public class VynCoClient : IDisposable
         PropertyNameCaseInsensitive = true,
     };
 
-    /// <summary>Companies resource — search, list, get, count, statistics, batch lookup.</summary>
+    /// <summary>Companies resource — search, list, get, count, statistics, batch, compare, relationships, hierarchy.</summary>
     public CompaniesResource Companies { get; }
-    /// <summary>Changes resource — list, get by company, statistics, review, batch.</summary>
+    /// <summary>Changes resource — list, get by company, statistics, review, batch, SOGC lookup.</summary>
     public ChangesResource Changes { get; }
-    /// <summary>Persons resource — search, get, roles, board members.</summary>
+    /// <summary>Persons resource — list, get, roles, board members, connections, network stats.</summary>
     public PersonsResource Persons { get; }
     /// <summary>Dossiers resource — generate, get, list AI-powered company dossiers.</summary>
     public DossiersResource Dossiers { get; }
@@ -37,12 +39,21 @@ public class VynCoClient : IDisposable
     public CreditsResource Credits { get; }
     /// <summary>Billing resource — Stripe checkout and portal sessions.</summary>
     public BillingResource Billing { get; }
-    /// <summary>Teams resource — create and get team.</summary>
+    /// <summary>Teams resource — create, get, manage members, billing summary.</summary>
     public TeamsResource Teams { get; }
-    /// <summary>Webhooks resource — CRUD and testing.</summary>
-    public WebhooksResource Webhooks { get; }
+    /// <summary>Watches resource — subscribe to company change notifications.</summary>
+    public WatchesResource Watches { get; }
+    /// <summary>Analytics resource — clustering, anomalies, cohorts, cantons, auditors, RFM, velocity.</summary>
+    public AnalyticsResource Analytics { get; }
+    /// <summary>News resource — recent news across all companies.</summary>
+    public NewsResource News { get; }
     /// <summary>Sync status resource — registry sync status.</summary>
     public SyncStatusResource SyncStatus { get; }
+    /// <summary>Health resource — API health check.</summary>
+    public HealthResource Health { get; }
+
+    /// <summary>Headers from the most recent API response (request-id, credits, rate-limit).</summary>
+    public VynCoResponseHeaders? LastResponseHeaders { get; private set; }
 
     public VynCoClient(string apiKey, string baseUrl = "https://api.vynco.ch", int maxRetries = 2, TimeSpan? timeout = null)
     {
@@ -54,7 +65,7 @@ public class VynCoClient : IDisposable
 
         _http = new HttpClient { Timeout = timeout ?? TimeSpan.FromSeconds(30) };
         _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
-        _http.DefaultRequestHeaders.UserAgent.ParseAdd("vynco-dotnet/0.1.0");
+        _http.DefaultRequestHeaders.UserAgent.ParseAdd($"vynco-dotnet/{SdkVersion}");
         _http.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
         Companies = new CompaniesResource(this);
@@ -65,8 +76,11 @@ public class VynCoClient : IDisposable
         Credits = new CreditsResource(this);
         Billing = new BillingResource(this);
         Teams = new TeamsResource(this);
-        Webhooks = new WebhooksResource(this);
+        Watches = new WatchesResource(this);
+        Analytics = new AnalyticsResource(this);
+        News = new NewsResource(this);
         SyncStatus = new SyncStatusResource(this);
+        Health = new HealthResource(this);
     }
 
     // -- Internal request methods used by resources --
@@ -105,6 +119,8 @@ public class VynCoClient : IDisposable
                 }
                 throw new VynCoException($"HTTP request failed: {ex.Message}");
             }
+
+            CaptureResponseHeaders(response);
 
             if (ShouldRetry(response.StatusCode) && attempt < _maxRetries)
             {
@@ -161,6 +177,31 @@ public class VynCoClient : IDisposable
 
     internal static JsonSerializerOptions GetJsonOptions() => JsonOptions;
 
+    private void CaptureResponseHeaders(HttpResponseMessage response)
+    {
+        var headers = new VynCoResponseHeaders();
+
+        if (response.Headers.TryGetValues("X-Request-Id", out var reqId))
+            headers.RequestId = string.Join(",", reqId);
+
+        if (response.Headers.TryGetValues("X-Credits-Used", out var cu) && int.TryParse(string.Join("", cu), out var creditsUsed))
+            headers.CreditsUsed = creditsUsed;
+
+        if (response.Headers.TryGetValues("X-Credits-Remaining", out var cr) && int.TryParse(string.Join("", cr), out var creditsRemaining))
+            headers.CreditsRemaining = creditsRemaining;
+
+        if (response.Headers.TryGetValues("X-Rate-Limit-Limit", out var rl) && int.TryParse(string.Join("", rl), out var rateLimitLimit))
+            headers.RateLimitLimit = rateLimitLimit;
+
+        if (response.Headers.TryGetValues("X-Data-Source", out var ds))
+            headers.DataSource = string.Join(",", ds);
+
+        if (response.Headers.TryGetValues("Retry-After", out var ra) && int.TryParse(string.Join("", ra), out var retryAfter))
+            headers.RetryAfter = retryAfter;
+
+        LastResponseHeaders = headers;
+    }
+
     private static List<T> ExtractList<T>(JsonElement value)
     {
         if (value.ValueKind == JsonValueKind.Array)
@@ -205,8 +246,10 @@ public class VynCoClient : IDisposable
 
         return status switch
         {
+            HttpStatusCode.BadRequest => new BadRequestException(message, problemDetails),
             HttpStatusCode.Unauthorized => new AuthenticationException(message, problemDetails),
             HttpStatusCode.PaymentRequired => new InsufficientCreditsException(message, problemDetails),
+            HttpStatusCode.Forbidden => new ForbiddenException(message, problemDetails),
             HttpStatusCode.NotFound => new NotFoundException(message, problemDetails),
             HttpStatusCode.Conflict => new ConflictException(message, problemDetails),
             (HttpStatusCode)422 => new ValidationException(message, problemDetails),

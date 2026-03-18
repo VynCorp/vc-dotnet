@@ -3,7 +3,7 @@
 [![NuGet](https://img.shields.io/nuget/v/VynCo)](https://www.nuget.org/packages/VynCo)
 [![License](https://img.shields.io/github/license/VynCorp/vc-dotnet)](LICENSE)
 
-.NET SDK for the [VynCo](https://vynco.ch) Swiss Corporate Intelligence API. Access 320,000+ Swiss companies from the Zefix commercial register with typed clients, automatic retries, and structured error handling.
+.NET SDK for the [VynCo](https://vynco.ch) Swiss Corporate Intelligence API. Access 320,000+ Swiss companies from the Zefix commercial register with typed clients, automatic retries, credit tracking headers, and structured error handling.
 
 ## Installation
 
@@ -29,6 +29,10 @@ var results = await client.Companies.SearchAsync(
 var company = await client.Companies.GetAsync("CHE-123.456.789");
 Console.WriteLine($"{company.Name} ({company.Canton}) - {company.Status}");
 
+// Check credit usage from response headers
+Console.WriteLine($"Credits used: {client.LastResponseHeaders?.CreditsUsed}");
+Console.WriteLine($"Remaining: {client.LastResponseHeaders?.CreditsRemaining}");
+
 // List recent registry changes
 var changes = await client.Changes.ListAsync(
     new ListChangesParams { Page = 1, PageSize = 10 });
@@ -42,16 +46,19 @@ Console.WriteLine($"Credits remaining: {balance.Balance}/{balance.MonthlyCredits
 
 | Resource | Methods | Description |
 |----------|---------|-------------|
-| `client.Companies` | `ListAsync`, `GetAsync`, `CountAsync`, `StatisticsAsync`, `SearchAsync`, `BatchAsync` | Swiss company data from the Zefix register |
-| `client.Changes` | `ListAsync`, `GetByCompanyAsync`, `StatisticsAsync`, `ReviewAsync`, `BatchAsync` | Registry change tracking and review |
-| `client.Persons` | `SearchAsync`, `GetAsync`, `GetRolesAsync`, `GetBoardMembersAsync` | Board members and executives |
+| `client.Companies` | `ListAsync`, `GetAsync`, `CountAsync`, `StatisticsAsync`, `SearchAsync`, `BatchAsync`, `CompareAsync`, `GetRelationshipsAsync`, `GetHierarchyAsync`, `GetNewsAsync`, `GetReportsAsync` | Swiss company data, relationships, news, reports |
+| `client.Changes` | `ListAsync`, `GetByCompanyAsync`, `StatisticsAsync`, `GetBySogcIdAsync`, `ReviewAsync`, `BatchAsync` | Registry change tracking, SOGC lookup, review |
+| `client.Persons` | `ListAsync`, `GetAsync`, `GetRolesAsync`, `GetConnectionsAsync`, `GetBoardMembersAsync`, `NetworkStatsAsync` | Board members, executives, and networks |
 | `client.Dossiers` | `GetAsync`, `ListAsync`, `GenerateAsync`, `StatisticsAsync` | AI-powered company intelligence dossiers |
+| `client.Analytics` | `ClusterAsync`, `DetectAnomaliesAsync`, `CohortsAsync`, `CantonsAsync`, `AuditorsAsync`, `RfmSegmentsAsync`, `VelocityAsync` | Clustering, anomalies, cohorts, segmentation |
+| `client.Watches` | `ListAsync`, `AddAsync`, `RemoveAsync`, `ListNotificationsAsync` | Company watch subscriptions and notifications |
+| `client.News` | `GetRecentAsync` | Recent news across all companies |
 | `client.ApiKeys` | `CreateAsync`, `ListAsync`, `RevokeAsync` | API key lifecycle management |
 | `client.Credits` | `BalanceAsync`, `UsageAsync`, `HistoryAsync` | Credit balance, usage, and transaction ledger |
 | `client.Billing` | `CreateCheckoutSessionAsync`, `CreatePortalSessionAsync` | Stripe billing integration |
-| `client.Teams` | `CreateAsync`, `GetCurrentAsync` | Team management |
-| `client.Webhooks` | `CreateAsync`, `ListAsync`, `GetAsync`, `DeleteAsync`, `TestAsync` | Webhook CRUD and testing |
+| `client.Teams` | `CreateAsync`, `GetCurrentAsync`, `ListMembersAsync`, `InviteMemberAsync`, `UpdateMemberRoleAsync`, `RemoveMemberAsync`, `BillingSummaryAsync` | Team and member management |
 | `client.SyncStatus` | `GetAsync` | Zefix registry sync status |
+| `client.Health` | `CheckAsync` | API health check |
 
 ## Configuration
 
@@ -65,6 +72,21 @@ using var client = new VynCoClient(
 ```
 
 The client authenticates with a Bearer token. Use `vc_live_*` keys for production and `vc_test_*` keys for testing (test keys do not consume credits).
+
+## Response headers
+
+Every API response includes credit and rate-limit metadata, accessible via `client.LastResponseHeaders`:
+
+```csharp
+await client.Companies.GetAsync("CHE-123.456.789");
+
+var headers = client.LastResponseHeaders;
+Console.WriteLine($"Request ID:   {headers?.RequestId}");
+Console.WriteLine($"Credits used: {headers?.CreditsUsed}");
+Console.WriteLine($"Remaining:    {headers?.CreditsRemaining}");
+Console.WriteLine($"Rate limit:   {headers?.RateLimitLimit} req/min");
+Console.WriteLine($"Data source:  {headers?.DataSource}");
+```
 
 ## Error handling
 
@@ -97,11 +119,13 @@ catch (VynCoException ex)
 
 | Exception | Status | When |
 |-----------|--------|------|
+| `BadRequestException` | 400 | Invalid request parameters |
 | `AuthenticationException` | 401 | Invalid or missing API key |
 | `InsufficientCreditsException` | 402 | Credit balance exhausted |
+| `ForbiddenException` | 403 | Insufficient permissions |
 | `NotFoundException` | 404 | Entity not found |
-| `ConflictException` | 409 | Conflicting state |
-| `ValidationException` | 422 | Invalid request parameters |
+| `ConflictException` | 409 | Conflicting state (e.g., duplicate invitation) |
+| `ValidationException` | 422 | Request validation failed |
 | `RateLimitException` | 429 | Rate limit exceeded (after retries) |
 | `ServerException` | 5xx | Server error (after retries) |
 
@@ -123,11 +147,42 @@ while (page.HasNextPage)
 
 ## Batch operations
 
-Look up multiple companies in a single request (up to 500 UIDs):
+Look up multiple companies in a single request (up to 50 UIDs):
 
 ```csharp
 var companies = await client.Companies.BatchAsync(
     new BatchLookupRequest { Uids = new List<string> { "CHE-123.456.789", "CHE-987.654.321" } });
+```
+
+## Company watches
+
+Subscribe to change notifications for companies you're monitoring:
+
+```csharp
+// Add a watch
+var watch = await client.Watches.AddAsync(new AddWatchRequest
+{
+    CompanyUid = "CHE-123.456.789",
+    Channel = "InApp",
+    WatchedChangeTypes = new List<string> { "NameChange", "AuditorChange" }
+});
+
+// List notifications
+var notifications = await client.Watches.ListNotificationsAsync(limit: 20);
+```
+
+## Analytics
+
+Run advanced analytics on the Swiss corporate registry:
+
+```csharp
+// K-Means clustering
+var clusters = await client.Analytics.ClusterAsync(
+    new ClusteringRequest { K = 5, Canton = "ZH", Limit = 1000 });
+
+// Change velocity over the last 7 days
+var velocity = await client.Analytics.VelocityAsync(
+    new VelocityParams { Days = 7 });
 ```
 
 ## License

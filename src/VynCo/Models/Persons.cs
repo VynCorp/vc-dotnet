@@ -5,11 +5,14 @@ namespace VynCo.Models;
 public class Person
 {
     [JsonPropertyName("id")] public Guid Id { get; set; }
-    [JsonPropertyName("fullName")] public string FullName { get; set; } = "";
+    [JsonPropertyName("name")] public string? Name { get; set; }
+    [JsonPropertyName("fullName")] public string? FullName { get; set; }
     [JsonPropertyName("firstName")] public string? FirstName { get; set; }
     [JsonPropertyName("lastName")] public string? LastName { get; set; }
     [JsonPropertyName("placeOfOrigin")] public string? PlaceOfOrigin { get; set; }
     [JsonPropertyName("residence")] public string? Residence { get; set; }
+    [JsonPropertyName("roles")] public List<string>? Roles { get; set; }
+    [JsonPropertyName("companies")] public List<string>? Companies { get; set; }
     [JsonPropertyName("roleCount")] public int RoleCount { get; set; }
     [JsonPropertyName("activeRoleCount")] public int ActiveRoleCount { get; set; }
 }
@@ -33,9 +36,10 @@ public class BoardMember
     [JsonPropertyName("role")] public PersonConnection Role { get; set; } = new();
 }
 
-/// <summary>Parameters for searching persons.</summary>
-public class SearchPersonsParams
+/// <summary>Parameters for listing persons with pagination.</summary>
+public class ListPersonsParams
 {
-    public string? Query { get; set; }
-    public int Limit { get; set; } = 50;
+    public int Page { get; set; } = 1;
+    public int PageSize { get; set; } = 25;
+    public string? Search { get; set; }
 }

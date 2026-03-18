@@ -16,6 +16,12 @@ public class VynCoException : Exception
     }
 }
 
+public class BadRequestException : VynCoException
+{
+    public BadRequestException(string message, ProblemDetails? body = null)
+        : base(message, 400, body) { }
+}
+
 public class AuthenticationException : VynCoException
 {
     public AuthenticationException(string message, ProblemDetails? body = null)
@@ -26,6 +32,12 @@ public class InsufficientCreditsException : VynCoException
 {
     public InsufficientCreditsException(string message, ProblemDetails? body = null)
         : base(message, 402, body) { }
+}
+
+public class ForbiddenException : VynCoException
+{
+    public ForbiddenException(string message, ProblemDetails? body = null)
+        : base(message, 403, body) { }
 }
 
 public class NotFoundException : VynCoException
@@ -67,4 +79,26 @@ public class ProblemDetails
     [JsonPropertyName("detail")] public string? Detail { get; set; }
     [JsonPropertyName("instance")] public string? Instance { get; set; }
     [JsonPropertyName("traceId")] public string? TraceId { get; set; }
+}
+
+/// <summary>Response headers returned by the VynCo API on every request.</summary>
+public class VynCoResponseHeaders
+{
+    /// <summary>Unique request identifier for support and debugging.</summary>
+    public string? RequestId { get; set; }
+
+    /// <summary>Credits debited for the completed operation.</summary>
+    public int? CreditsUsed { get; set; }
+
+    /// <summary>Credit balance remaining after the operation.</summary>
+    public int? CreditsRemaining { get; set; }
+
+    /// <summary>Rate limit ceiling for the current tier (requests per minute).</summary>
+    public int? RateLimitLimit { get; set; }
+
+    /// <summary>Data source attribution header.</summary>
+    public string? DataSource { get; set; }
+
+    /// <summary>Seconds to wait before retrying (present on 429 responses).</summary>
+    public int? RetryAfter { get; set; }
 }

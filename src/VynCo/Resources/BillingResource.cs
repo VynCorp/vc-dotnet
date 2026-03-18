@@ -9,10 +9,10 @@ public class BillingResource
     internal BillingResource(VynCoClient client) => _client = client;
 
     /// <summary>Create a Stripe checkout session for upgrading a plan.</summary>
-    public Task<SessionUrl> CreateCheckoutSessionAsync(CancellationToken ct = default)
-        => _client.RequestAsync<SessionUrl>(HttpMethod.Post, "/v1/billing/checkout-session", ct);
+    public Task<SessionUrl> CreateCheckoutSessionAsync(CheckoutSessionRequest? request = null, CancellationToken ct = default)
+        => _client.RequestAsync<SessionUrl>(HttpMethod.Post, "/api/v1/billing/checkout-session", request, ct);
 
     /// <summary>Create a Stripe customer portal session for managing billing.</summary>
     public Task<SessionUrl> CreatePortalSessionAsync(CancellationToken ct = default)
-        => _client.RequestAsync<SessionUrl>(HttpMethod.Post, "/v1/billing/portal-session", ct);
+        => _client.RequestAsync<SessionUrl>(HttpMethod.Post, "/api/v1/billing/portal-session", ct);
 }

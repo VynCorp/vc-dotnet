@@ -6,10 +6,12 @@ public class Change
 {
     [JsonPropertyName("id")] public Guid Id { get; set; }
     [JsonPropertyName("companyUid")] public string CompanyUid { get; set; } = "";
+    [JsonPropertyName("companyName")] public string? CompanyName { get; set; }
     [JsonPropertyName("changeType")] public string ChangeType { get; set; } = "";
     [JsonPropertyName("fieldName")] public string? FieldName { get; set; }
     [JsonPropertyName("oldValue")] public string? OldValue { get; set; }
     [JsonPropertyName("newValue")] public string? NewValue { get; set; }
+    [JsonPropertyName("sogcId")] public string? SogcId { get; set; }
     [JsonPropertyName("detectedAt")] public DateTime DetectedAt { get; set; }
     [JsonPropertyName("isReviewed")] public bool IsReviewed { get; set; }
     [JsonPropertyName("reviewedBy")] public string? ReviewedBy { get; set; }
@@ -26,8 +28,6 @@ public class ChangeStatistics
 
 public class ReviewChangeRequest
 {
-    [JsonPropertyName("reviewedBy")] public string ReviewedBy { get; set; } = "";
-    [JsonPropertyName("isFlagged")] public bool IsFlagged { get; set; }
     [JsonPropertyName("reviewNotes")] public string? ReviewNotes { get; set; }
 }
 

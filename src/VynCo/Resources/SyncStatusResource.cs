@@ -10,5 +10,5 @@ public class SyncStatusResource
 
     /// <summary>Get the current sync status from the Zefix registry.</summary>
     public Task<List<SyncStatusEntry>> GetAsync(CancellationToken ct = default)
-        => _client.RequestListAsync<SyncStatusEntry>(HttpMethod.Get, "/v1/sync/status", ct);
+        => _client.RequestListAsync<SyncStatusEntry>(HttpMethod.Get, "/api/v1/sync/status", ct);
 }

@@ -10,13 +10,13 @@ public class ApiKeysResource
 
     /// <summary>Create a new API key.</summary>
     public Task<ApiKeyCreated> CreateAsync(CreateApiKeyRequest request, CancellationToken ct = default)
-        => _client.RequestAsync<ApiKeyCreated>(HttpMethod.Post, "/v1/api-keys", request, ct);
+        => _client.RequestAsync<ApiKeyCreated>(HttpMethod.Post, "/api/v1/api-keys", request, ct);
 
     /// <summary>List all API keys for the authenticated team.</summary>
     public Task<List<ApiKey>> ListAsync(CancellationToken ct = default)
-        => _client.RequestListAsync<ApiKey>(HttpMethod.Get, "/v1/api-keys", ct);
+        => _client.RequestListAsync<ApiKey>(HttpMethod.Get, "/api/v1/api-keys", ct);
 
     /// <summary>Revoke an API key.</summary>
     public Task RevokeAsync(Guid keyId, CancellationToken ct = default)
-        => _client.RequestVoidAsync(HttpMethod.Delete, $"/v1/api-keys/{keyId}", ct);
+        => _client.RequestVoidAsync(HttpMethod.Delete, $"/api/v1/api-keys/{keyId}", ct);
 }
