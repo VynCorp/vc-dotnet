@@ -10,24 +10,23 @@ public class CreditsResource
 
     /// <summary>Get current credit balance and tier info.</summary>
     public Task<CreditBalance> BalanceAsync(CancellationToken ct = default)
-        => _client.RequestAsync<CreditBalance>(HttpMethod.Get, "/api/v1/credits/balance", ct);
+        => _client.RequestAsync<CreditBalance>(HttpMethod.Get, "/v1/credits/balance", ct);
 
     /// <summary>Get usage breakdown by operation type.</summary>
-    public Task<UsageBreakdown> UsageAsync(CreditUsageParams? @params = null, CancellationToken ct = default)
+    public Task<CreditUsage> UsageAsync(string? since = null, CancellationToken ct = default)
     {
-        var query = "";
-        if (@params?.Since is not null)
-            query = $"?since={Uri.EscapeDataString(@params.Since)}";
-
-        return _client.RequestAsync<UsageBreakdown>(HttpMethod.Get, $"/api/v1/credits/usage{query}", ct);
+        var query = since is not null ? $"?since={Uri.EscapeDataString(since)}" : "";
+        return _client.RequestAsync<CreditUsage>(HttpMethod.Get, $"/v1/credits/usage{query}", ct);
     }
 
-    /// <summary>Get credit ledger entries (transaction history).</summary>
-    public Task<List<CreditLedgerEntry>> HistoryAsync(CreditHistoryParams? @params = null, CancellationToken ct = default)
+    /// <summary>Get credit ledger history.</summary>
+    public Task<CreditHistory> HistoryAsync(long? limit = null, long? offset = null, CancellationToken ct = default)
     {
-        var p = @params ?? new CreditHistoryParams();
-        var query = $"?limit={p.Limit}&offset={p.Offset}";
+        var qs = new List<string>();
+        if (limit.HasValue) qs.Add($"limit={limit.Value}");
+        if (offset.HasValue) qs.Add($"offset={offset.Value}");
+        var query = qs.Count > 0 ? "?" + string.Join("&", qs) : "";
 
-        return _client.RequestListAsync<CreditLedgerEntry>(HttpMethod.Get, $"/api/v1/credits/history{query}", ct);
+        return _client.RequestAsync<CreditHistory>(HttpMethod.Get, $"/v1/credits/history{query}", ct);
     }
 }

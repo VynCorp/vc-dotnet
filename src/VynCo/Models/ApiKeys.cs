@@ -2,38 +2,38 @@ using System.Text.Json.Serialization;
 
 namespace VynCo.Models;
 
+/// <summary>An API key.</summary>
 public class ApiKey
 {
-    [JsonPropertyName("id")] public Guid Id { get; set; }
+    [JsonPropertyName("id")] public string Id { get; set; } = "";
     [JsonPropertyName("name")] public string Name { get; set; } = "";
-    [JsonPropertyName("prefix")] public string? Prefix { get; set; }
-    [JsonPropertyName("keyPrefix")] public string? KeyPrefix { get; set; }
-    [JsonPropertyName("keyHint")] public string? KeyHint { get; set; }
-    [JsonPropertyName("isTestKey")] public bool IsTestKey { get; set; }
-    [JsonPropertyName("permissions")] public List<string>? Permissions { get; set; }
-    [JsonPropertyName("isActive")] public bool IsActive { get; set; }
-    [JsonPropertyName("lastUsedAt")] public DateTime? LastUsedAt { get; set; }
-    [JsonPropertyName("createdAt")] public DateTime CreatedAt { get; set; }
-    [JsonPropertyName("expiresAt")] public DateTime? ExpiresAt { get; set; }
+    [JsonPropertyName("prefix")] public string Prefix { get; set; } = "";
+    [JsonPropertyName("environment")] public string Environment { get; set; } = "";
+    [JsonPropertyName("scopes")] public List<string> Scopes { get; set; } = new();
+    [JsonPropertyName("status")] public string Status { get; set; } = "";
+    [JsonPropertyName("expiresAt")] public string? ExpiresAt { get; set; }
+    [JsonPropertyName("createdAt")] public string CreatedAt { get; set; } = "";
+    [JsonPropertyName("lastUsedAt")] public string? LastUsedAt { get; set; }
 }
 
+/// <summary>An API key as returned on creation (includes the raw key).</summary>
 public class ApiKeyCreated
 {
-    [JsonPropertyName("id")] public Guid Id { get; set; }
+    [JsonPropertyName("key")] public string Key { get; set; } = "";
+    [JsonPropertyName("id")] public string Id { get; set; } = "";
     [JsonPropertyName("name")] public string Name { get; set; } = "";
-    [JsonPropertyName("prefix")] public string? Prefix { get; set; }
-    [JsonPropertyName("keyPrefix")] public string? KeyPrefix { get; set; }
-    [JsonPropertyName("keyHint")] public string? KeyHint { get; set; }
-    [JsonPropertyName("key")] public string? Key { get; set; }
-    [JsonPropertyName("rawKey")] public string? RawKey { get; set; }
-    [JsonPropertyName("isTestKey")] public bool IsTestKey { get; set; }
-    [JsonPropertyName("permissions")] public List<string>? Permissions { get; set; }
-    [JsonPropertyName("isActive")] public bool IsActive { get; set; }
-    [JsonPropertyName("createdAt")] public DateTime CreatedAt { get; set; }
+    [JsonPropertyName("prefix")] public string Prefix { get; set; } = "";
+    [JsonPropertyName("environment")] public string Environment { get; set; } = "";
+    [JsonPropertyName("scopes")] public List<string> Scopes { get; set; } = new();
+    [JsonPropertyName("expiresAt")] public string? ExpiresAt { get; set; }
+    [JsonPropertyName("createdAt")] public string CreatedAt { get; set; } = "";
+    [JsonPropertyName("warning")] public string Warning { get; set; } = "";
 }
 
+/// <summary>Request body for creating an API key.</summary>
 public class CreateApiKeyRequest
 {
-    [JsonPropertyName("name")] public string Name { get; set; } = "";
-    [JsonPropertyName("isTestKey")] public bool IsTestKey { get; set; }
+    [JsonPropertyName("name")] public string? Name { get; set; }
+    [JsonPropertyName("environment")] public string? Environment { get; set; }
+    [JsonPropertyName("scopes")] public List<string>? Scopes { get; set; }
 }

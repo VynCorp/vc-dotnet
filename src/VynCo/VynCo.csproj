@@ -9,14 +9,14 @@
 
     <!-- NuGet package metadata -->
     <PackageId>VynCo</PackageId>
-    <Version>1.0.0</Version>
+    <Version>2.0.0</Version>
     <Authors>VynCo</Authors>
     <Company>VynCo</Company>
-    <Description>.NET SDK for the VynCo Swiss Corporate Intelligence API</Description>
+    <Description>Official .NET SDK for the VynCo Swiss Corporate Intelligence API — access 500,000+ Swiss companies with change tracking, sanctions screening, AI risk analysis, network graphs, watchlists, webhooks, and bulk exports.</Description>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageProjectUrl>https://vynco.ch</PackageProjectUrl>
     <RepositoryUrl>https://github.com/VynCorp/vc-dotnet</RepositoryUrl>
-    <PackageTags>vynco;swiss;corporate;intelligence;api;zefix</PackageTags>
+    <PackageTags>vynco;swiss;corporate;intelligence;api;zefix;sdk</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 

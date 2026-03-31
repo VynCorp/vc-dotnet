@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace VynCo.Models;
 
+/// <summary>A Swiss company record.</summary>
 public class Company
 {
     [JsonPropertyName("uid")] public string Uid { get; set; } = "";
@@ -10,92 +11,160 @@ public class Company
     [JsonPropertyName("canton")] public string? Canton { get; set; }
     [JsonPropertyName("status")] public string? Status { get; set; }
     [JsonPropertyName("legalForm")] public string? LegalForm { get; set; }
-    [JsonPropertyName("legalFormId")] public int? LegalFormId { get; set; }
-    [JsonPropertyName("purpose")] public string? Purpose { get; set; }
-    [JsonPropertyName("address")] public string? Address { get; set; }
-    [JsonPropertyName("registeredAddress")] public string? RegisteredAddress { get; set; }
-    [JsonPropertyName("shareCapital")] public decimal? ShareCapital { get; set; }
-    [JsonPropertyName("currency")] public string? Currency { get; set; }
-    [JsonPropertyName("currentAuditor")] public string? CurrentAuditor { get; set; }
+    [JsonPropertyName("shareCapital")] public double? ShareCapital { get; set; }
+    [JsonPropertyName("industry")] public string? Industry { get; set; }
     [JsonPropertyName("auditorCategory")] public string? AuditorCategory { get; set; }
-    [JsonPropertyName("isActive")] public bool IsActive { get; set; }
-    [JsonPropertyName("foundingDate")] public DateTime? FoundingDate { get; set; }
-    [JsonPropertyName("deletionDate")] public DateTime? DeletionDate { get; set; }
-    [JsonPropertyName("createdAt")] public DateTime CreatedAt { get; set; }
-    [JsonPropertyName("updatedAt")] public DateTime UpdatedAt { get; set; }
+    [JsonPropertyName("updatedAt")] public string? UpdatedAt { get; set; }
 }
 
 public class CompanyCount
 {
-    [JsonPropertyName("count")] public int Count { get; set; }
+    [JsonPropertyName("count")] public long Count { get; set; }
 }
 
 public class CompanyStatistics
 {
-    [JsonPropertyName("totalCount")] public int TotalCount { get; set; }
-    [JsonPropertyName("enrichedCount")] public int EnrichedCount { get; set; }
-    [JsonPropertyName("cantonCounts")] public Dictionary<string, int> CantonCounts { get; set; } = new();
-    [JsonPropertyName("auditorCategoryCounts")] public Dictionary<string, int> AuditorCategoryCounts { get; set; } = new();
+    [JsonPropertyName("total")] public long Total { get; set; }
+    [JsonPropertyName("byStatus")] public Dictionary<string, long> ByStatus { get; set; } = new();
+    [JsonPropertyName("byCanton")] public Dictionary<string, long> ByCanton { get; set; } = new();
+    [JsonPropertyName("byLegalForm")] public Dictionary<string, long> ByLegalForm { get; set; } = new();
 }
 
-public class CompanySearchRequest
+/// <summary>Query parameters for listing companies.</summary>
+public class CompanyListParams
 {
-    [JsonPropertyName("query")] public string Query { get; set; } = "";
-    [JsonPropertyName("limit")] public int Limit { get; set; } = 25;
+    public string? Search { get; set; }
+    public string? Canton { get; set; }
+    public string? ChangedSince { get; set; }
+    public long? Page { get; set; }
+    public long? PageSize { get; set; }
 }
 
-public class CompanyCompareRequest
+/// <summary>Response wrapper for event listing.</summary>
+public class EventListResponse
+{
+    [JsonPropertyName("events")] public List<CompanyEvent> Events { get; set; } = new();
+    [JsonPropertyName("count")] public long Count { get; set; }
+}
+
+/// <summary>A CloudEvent-style company event.</summary>
+public class CompanyEvent
+{
+    [JsonPropertyName("id")] public string Id { get; set; } = "";
+    [JsonPropertyName("ceType")] public string CeType { get; set; } = "";
+    [JsonPropertyName("ceSource")] public string CeSource { get; set; } = "";
+    [JsonPropertyName("ceTime")] public string CeTime { get; set; } = "";
+    [JsonPropertyName("companyUid")] public string CompanyUid { get; set; } = "";
+    [JsonPropertyName("companyName")] public string CompanyName { get; set; } = "";
+    [JsonPropertyName("category")] public string Category { get; set; } = "";
+    [JsonPropertyName("severity")] public string Severity { get; set; } = "";
+    [JsonPropertyName("summary")] public string Summary { get; set; } = "";
+    [JsonPropertyName("detailJson")] public JsonElement DetailJson { get; set; }
+    [JsonPropertyName("createdAt")] public string CreatedAt { get; set; } = "";
+}
+
+/// <summary>Request body for comparing companies.</summary>
+public class CompareRequest
 {
     [JsonPropertyName("uids")] public List<string> Uids { get; set; } = new();
 }
 
-public class CompanyRelationship
+/// <summary>Company comparison response.</summary>
+public class CompareResponse
 {
-    [JsonPropertyName("id")] public Guid Id { get; set; }
-    [JsonPropertyName("sourceCompanyUid")] public string SourceCompanyUid { get; set; } = "";
-    [JsonPropertyName("sourceCompanyName")] public string SourceCompanyName { get; set; } = "";
-    [JsonPropertyName("targetCompanyUid")] public string TargetCompanyUid { get; set; } = "";
-    [JsonPropertyName("targetCompanyName")] public string TargetCompanyName { get; set; } = "";
+    [JsonPropertyName("uids")] public List<string> Uids { get; set; } = new();
+    [JsonPropertyName("names")] public List<string> Names { get; set; } = new();
+    [JsonPropertyName("dimensions")] public List<ComparisonDimension> Dimensions { get; set; } = new();
+}
+
+/// <summary>A single dimension in a company comparison.</summary>
+public class ComparisonDimension
+{
+    [JsonPropertyName("field")] public string Field { get; set; } = "";
+    [JsonPropertyName("label")] public string Label { get; set; } = "";
+    [JsonPropertyName("values")] public List<string?> Values { get; set; } = new();
+}
+
+/// <summary>A news item for a company.</summary>
+public class NewsItem
+{
+    [JsonPropertyName("id")] public string Id { get; set; } = "";
+    [JsonPropertyName("title")] public string Title { get; set; } = "";
+    [JsonPropertyName("summary")] public string? Summary { get; set; }
+    [JsonPropertyName("source")] public string? Source { get; set; }
+    [JsonPropertyName("sourceType")] public string SourceType { get; set; } = "";
+    [JsonPropertyName("publishedAt")] public string PublishedAt { get; set; } = "";
+    [JsonPropertyName("sourceUrl")] public string? Url { get; set; }
+}
+
+/// <summary>A financial report for a company.</summary>
+public class CompanyReport
+{
+    [JsonPropertyName("reportType")] public string ReportType { get; set; } = "";
+    [JsonPropertyName("fiscalYear")] public int? FiscalYear { get; set; }
+    [JsonPropertyName("description")] public string Description { get; set; } = "";
+    [JsonPropertyName("sourceUrl")] public string? SourceUrl { get; set; }
+    [JsonPropertyName("publicationDate")] public string PublicationDate { get; set; } = "";
+}
+
+/// <summary>A relationship between two companies.</summary>
+public class Relationship
+{
+    [JsonPropertyName("relatedUid")] public string RelatedUid { get; set; } = "";
+    [JsonPropertyName("relatedName")] public string RelatedName { get; set; } = "";
     [JsonPropertyName("relationshipType")] public string RelationshipType { get; set; } = "";
-    [JsonPropertyName("sourceLei")] public string? SourceLei { get; set; }
-    [JsonPropertyName("targetLei")] public string? TargetLei { get; set; }
-    [JsonPropertyName("dataSource")] public string DataSource { get; set; } = "";
-    [JsonPropertyName("startDate")] public DateTime? StartDate { get; set; }
-    [JsonPropertyName("endDate")] public DateTime? EndDate { get; set; }
-    [JsonPropertyName("isActive")] public bool IsActive { get; set; }
+    [JsonPropertyName("sharedPersons")] public List<string> SharedPersons { get; set; } = new();
 }
 
-public class RelationshipResponse
+/// <summary>Corporate hierarchy response.</summary>
+public class HierarchyResponse
+{
+    [JsonPropertyName("parent")] public JsonElement? Parent { get; set; }
+    [JsonPropertyName("subsidiaries")] public List<JsonElement> Subsidiaries { get; set; } = new();
+    [JsonPropertyName("siblings")] public List<JsonElement> Siblings { get; set; } = new();
+}
+
+/// <summary>Company data fingerprint.</summary>
+public class Fingerprint
 {
     [JsonPropertyName("companyUid")] public string CompanyUid { get; set; } = "";
-    [JsonPropertyName("total")] public int Total { get; set; }
-    [JsonPropertyName("relationships")] public List<CompanyRelationship> Relationships { get; set; } = new();
+    [JsonPropertyName("name")] public string Name { get; set; } = "";
+    [JsonPropertyName("industrySector")] public string? IndustrySector { get; set; }
+    [JsonPropertyName("industryGroup")] public string? IndustryGroup { get; set; }
+    [JsonPropertyName("industry")] public string? Industry { get; set; }
+    [JsonPropertyName("sizeCategory")] public string? SizeCategory { get; set; }
+    [JsonPropertyName("employeeCountEstimate")] public int? EmployeeCountEstimate { get; set; }
+    [JsonPropertyName("capitalAmount")] public double? CapitalAmount { get; set; }
+    [JsonPropertyName("capitalCurrency")] public string? CapitalCurrency { get; set; }
+    [JsonPropertyName("revenue")] public double? Revenue { get; set; }
+    [JsonPropertyName("netIncome")] public double? NetIncome { get; set; }
+    [JsonPropertyName("auditorTier")] public string? AuditorTier { get; set; }
+    [JsonPropertyName("changeFrequency")] public long ChangeFrequency { get; set; }
+    [JsonPropertyName("boardSize")] public long BoardSize { get; set; }
+    [JsonPropertyName("companyAge")] public long CompanyAge { get; set; }
+    [JsonPropertyName("canton")] public string Canton { get; set; } = "";
+    [JsonPropertyName("legalForm")] public string LegalForm { get; set; } = "";
+    [JsonPropertyName("hasParentCompany")] public bool HasParentCompany { get; set; }
+    [JsonPropertyName("subsidiaryCount")] public long SubsidiaryCount { get; set; }
+    [JsonPropertyName("generatedAt")] public string GeneratedAt { get; set; } = "";
+    [JsonPropertyName("fingerprintVersion")] public string FingerprintVersion { get; set; } = "";
 }
 
-public class CompanyNewsResponse
+/// <summary>Query parameters for finding nearby companies.</summary>
+public class NearbyParams
 {
-    [JsonPropertyName("companyUid")] public string CompanyUid { get; set; } = "";
-    [JsonPropertyName("count")] public int Count { get; set; }
-    [JsonPropertyName("items")] public List<JsonElement> Items { get; set; } = new();
+    public double Lat { get; set; }
+    public double Lng { get; set; }
+    public double? RadiusKm { get; set; }
+    public long? Limit { get; set; }
 }
 
-public class CompanyReportsResponse
+/// <summary>A company near a geographic location.</summary>
+public class NearbyCompany
 {
-    [JsonPropertyName("companyUid")] public string CompanyUid { get; set; } = "";
-    [JsonPropertyName("count")] public int Count { get; set; }
-    [JsonPropertyName("reports")] public List<JsonElement> Reports { get; set; } = new();
-}
-
-/// <summary>Parameters for listing companies with pagination and filtering.</summary>
-public class ListCompaniesParams
-{
-    public int Page { get; set; } = 1;
-    public int PageSize { get; set; } = 25;
-    public string? Canton { get; set; }
-    public string? Search { get; set; }
-    public string? Status { get; set; }
-    public string? TargetStatus { get; set; }
-    public string? SortBy { get; set; }
-    public bool? SortDesc { get; set; }
-    public string? AuditorCategory { get; set; }
+    [JsonPropertyName("uid")] public string Uid { get; set; } = "";
+    [JsonPropertyName("name")] public string Name { get; set; } = "";
+    [JsonPropertyName("distance")] public double Distance { get; set; }
+    [JsonPropertyName("latitude")] public double Latitude { get; set; }
+    [JsonPropertyName("longitude")] public double Longitude { get; set; }
 }

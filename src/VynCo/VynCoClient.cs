@@ -16,7 +16,7 @@ public class VynCoClient : IDisposable
     private readonly int _maxRetries;
     private bool _disposed;
 
-    public const string SdkVersion = "1.0.0";
+    public const string SdkVersion = "2.0.0";
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -25,14 +25,26 @@ public class VynCoClient : IDisposable
         PropertyNameCaseInsensitive = true,
     };
 
-    /// <summary>Companies resource — search, list, get, count, statistics, batch, compare, relationships, hierarchy.</summary>
+    // -- Resource properties --
+
+    /// <summary>Health resource — API health check.</summary>
+    public HealthResource Health { get; }
+    /// <summary>Companies resource — list, get, count, events, statistics, compare, news, reports, relationships, hierarchy, fingerprint, nearby.</summary>
     public CompaniesResource Companies { get; }
-    /// <summary>Changes resource — list, get by company, statistics, review, batch, SOGC lookup.</summary>
-    public ChangesResource Changes { get; }
-    /// <summary>Persons resource — list, get, roles, board members, connections, network stats.</summary>
-    public PersonsResource Persons { get; }
-    /// <summary>Dossiers resource — generate, get, list AI-powered company dossiers.</summary>
-    public DossiersResource Dossiers { get; }
+    /// <summary>Auditors resource — auditor history and tenures.</summary>
+    public AuditorsResource Auditors { get; }
+    /// <summary>Dashboard resource — admin dashboard.</summary>
+    public DashboardResource Dashboard { get; }
+    /// <summary>Screening resource — compliance screening.</summary>
+    public ScreeningResource Screening { get; }
+    /// <summary>Watchlists resource — manage watchlists and their companies.</summary>
+    public WatchlistsResource Watchlists { get; }
+    /// <summary>Webhooks resource — manage webhook subscriptions.</summary>
+    public WebhooksResource Webhooks { get; }
+    /// <summary>Exports resource — create, get, and download data exports.</summary>
+    public ExportsResource Exports { get; }
+    /// <summary>AI resource — dossier generation, search, risk scoring.</summary>
+    public AiResource Ai { get; }
     /// <summary>API key management resource.</summary>
     public ApiKeysResource ApiKeys { get; }
     /// <summary>Credits resource — balance, usage, history.</summary>
@@ -41,16 +53,16 @@ public class VynCoClient : IDisposable
     public BillingResource Billing { get; }
     /// <summary>Teams resource — create, get, manage members, billing summary.</summary>
     public TeamsResource Teams { get; }
-    /// <summary>Watches resource — subscribe to company change notifications.</summary>
-    public WatchesResource Watches { get; }
-    /// <summary>Analytics resource — clustering, anomalies, cohorts, cantons, auditors, RFM, velocity.</summary>
+    /// <summary>Changes resource — list, get by company, statistics.</summary>
+    public ChangesResource Changes { get; }
+    /// <summary>Persons resource — board members.</summary>
+    public PersonsResource Persons { get; }
+    /// <summary>Analytics resource — cantons, auditors, clustering, anomalies, RFM, cohorts, candidates.</summary>
     public AnalyticsResource Analytics { get; }
-    /// <summary>News resource — recent news across all companies.</summary>
-    public NewsResource News { get; }
-    /// <summary>Sync status resource — registry sync status.</summary>
-    public SyncStatusResource SyncStatus { get; }
-    /// <summary>Health resource — API health check.</summary>
-    public HealthResource Health { get; }
+    /// <summary>Dossiers resource — create, list, get, delete managed dossiers.</summary>
+    public DossiersResource Dossiers { get; }
+    /// <summary>Graph resource — network graphs and analysis.</summary>
+    public GraphResource Graph { get; }
 
     /// <summary>Headers from the most recent API response (request-id, credits, rate-limit).</summary>
     public VynCoResponseHeaders? LastResponseHeaders { get; private set; }
@@ -68,19 +80,24 @@ public class VynCoClient : IDisposable
         _http.DefaultRequestHeaders.UserAgent.ParseAdd($"vynco-dotnet/{SdkVersion}");
         _http.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
+        Health = new HealthResource(this);
         Companies = new CompaniesResource(this);
-        Changes = new ChangesResource(this);
-        Persons = new PersonsResource(this);
-        Dossiers = new DossiersResource(this);
+        Auditors = new AuditorsResource(this);
+        Dashboard = new DashboardResource(this);
+        Screening = new ScreeningResource(this);
+        Watchlists = new WatchlistsResource(this);
+        Webhooks = new WebhooksResource(this);
+        Exports = new ExportsResource(this);
+        Ai = new AiResource(this);
         ApiKeys = new ApiKeysResource(this);
         Credits = new CreditsResource(this);
         Billing = new BillingResource(this);
         Teams = new TeamsResource(this);
-        Watches = new WatchesResource(this);
+        Changes = new ChangesResource(this);
+        Persons = new PersonsResource(this);
         Analytics = new AnalyticsResource(this);
-        News = new NewsResource(this);
-        SyncStatus = new SyncStatusResource(this);
-        Health = new HealthResource(this);
+        Dossiers = new DossiersResource(this);
+        Graph = new GraphResource(this);
     }
 
     // -- Internal request methods used by resources --
@@ -175,6 +192,70 @@ public class VynCoClient : IDisposable
         return ExtractList<T>(value);
     }
 
+    internal async Task<ExportFile> RequestBytesAsync(string path, CancellationToken ct = default)
+    {
+        var url = $"{_baseUrl}{path}";
+
+        for (int attempt = 0; attempt <= _maxRetries; attempt++)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+
+            HttpResponseMessage response;
+            try
+            {
+                response = await _http.SendAsync(request, ct).ConfigureAwait(false);
+            }
+            catch (HttpRequestException ex)
+            {
+                if (attempt < _maxRetries)
+                {
+                    await Task.Delay(Backoff(attempt), ct).ConfigureAwait(false);
+                    continue;
+                }
+                throw new VynCoException($"HTTP request failed: {ex.Message}");
+            }
+
+            CaptureResponseHeaders(response);
+
+            if (ShouldRetry(response.StatusCode) && attempt < _maxRetries)
+            {
+                response.Dispose();
+                await Task.Delay(Backoff(attempt), ct).ConfigureAwait(false);
+                continue;
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorJson = await response.Content.ReadAsStringAsync(
+#if NET8_0_OR_GREATER
+                    ct
+#endif
+                ).ConfigureAwait(false);
+                response.Dispose();
+                throw MapException(response.StatusCode, errorJson);
+            }
+
+            var contentType = response.Content.Headers.ContentType?.MediaType ?? "application/octet-stream";
+            var filename = response.Content.Headers.ContentDisposition?.FileName?.Trim('"') ?? "";
+            var bytes = await response.Content.ReadAsByteArrayAsync(
+#if NET8_0_OR_GREATER
+                ct
+#endif
+            ).ConfigureAwait(false);
+            response.Dispose();
+
+            return new ExportFile
+            {
+                Headers = LastResponseHeaders ?? new VynCoResponseHeaders(),
+                Bytes = bytes,
+                ContentType = contentType,
+                Filename = filename,
+            };
+        }
+
+        throw new VynCoException("Max retries exceeded", body: null);
+    }
+
     internal static JsonSerializerOptions GetJsonOptions() => JsonOptions;
 
     private void CaptureResponseHeaders(HttpResponseMessage response)
@@ -190,8 +271,14 @@ public class VynCoClient : IDisposable
         if (response.Headers.TryGetValues("X-Credits-Remaining", out var cr) && int.TryParse(string.Join("", cr), out var creditsRemaining))
             headers.CreditsRemaining = creditsRemaining;
 
-        if (response.Headers.TryGetValues("X-Rate-Limit-Limit", out var rl) && int.TryParse(string.Join("", rl), out var rateLimitLimit))
+        if (response.Headers.TryGetValues("X-RateLimit-Limit", out var rl) && int.TryParse(string.Join("", rl), out var rateLimitLimit))
             headers.RateLimitLimit = rateLimitLimit;
+
+        if (response.Headers.TryGetValues("X-RateLimit-Remaining", out var rlr) && int.TryParse(string.Join("", rlr), out var rateLimitRemaining))
+            headers.RateLimitRemaining = rateLimitRemaining;
+
+        if (response.Headers.TryGetValues("X-RateLimit-Reset", out var rlre) && long.TryParse(string.Join("", rlre), out var rateLimitReset))
+            headers.RateLimitReset = rateLimitReset;
 
         if (response.Headers.TryGetValues("X-Data-Source", out var ds))
             headers.DataSource = string.Join(",", ds);

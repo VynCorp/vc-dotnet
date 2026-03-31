@@ -2,32 +2,32 @@ using System.Text.Json.Serialization;
 
 namespace VynCo.Models;
 
+/// <summary>Request body for creating a dossier.</summary>
+public class CreateDossierRequest
+{
+    [JsonPropertyName("uid")] public string Uid { get; set; } = "";
+    [JsonPropertyName("level")] public string? Level { get; set; }
+}
+
+/// <summary>A managed company dossier.</summary>
 public class Dossier
 {
-    [JsonPropertyName("id")] public Guid Id { get; set; }
+    [JsonPropertyName("id")] public string Id { get; set; } = "";
+    [JsonPropertyName("userId")] public string UserId { get; set; } = "";
     [JsonPropertyName("companyUid")] public string CompanyUid { get; set; } = "";
-    [JsonPropertyName("companyName")] public string? CompanyName { get; set; }
-    [JsonPropertyName("status")] public string Status { get; set; } = "";
-    [JsonPropertyName("summary")] public string? Summary { get; set; }
-    [JsonPropertyName("riskScore")] public double? RiskScore { get; set; }
-    [JsonPropertyName("generatedAt")] public DateTime GeneratedAt { get; set; }
-    [JsonPropertyName("executiveSummary")] public string? ExecutiveSummary { get; set; }
-    [JsonPropertyName("keyInsights")] public List<string> KeyInsights { get; set; } = new();
-    [JsonPropertyName("riskFactors")] public List<string> RiskFactors { get; set; } = new();
-    [JsonPropertyName("llmProvider")] public string? LlmProvider { get; set; }
-    [JsonPropertyName("llmModel")] public string? LlmModel { get; set; }
-    [JsonPropertyName("version")] public int Version { get; set; }
+    [JsonPropertyName("companyName")] public string CompanyName { get; set; } = "";
+    [JsonPropertyName("level")] public string Level { get; set; } = "";
+    [JsonPropertyName("content")] public string Content { get; set; } = "";
+    [JsonPropertyName("sources")] public List<string> Sources { get; set; } = new();
+    [JsonPropertyName("createdAt")] public string CreatedAt { get; set; } = "";
 }
 
-public class DossierStatistics
+/// <summary>Summary of a dossier (used in list responses).</summary>
+public class DossierSummary
 {
-    [JsonPropertyName("totalCount")] public int TotalCount { get; set; }
-    [JsonPropertyName("completedCount")] public int CompletedCount { get; set; }
-    [JsonPropertyName("failedCount")] public int FailedCount { get; set; }
-    [JsonPropertyName("pendingCount")] public int PendingCount { get; set; }
-}
-
-public class GenerateDossierRequest
-{
-    [JsonPropertyName("type")] public string Type { get; set; } = "standard";
+    [JsonPropertyName("id")] public string Id { get; set; } = "";
+    [JsonPropertyName("companyUid")] public string CompanyUid { get; set; } = "";
+    [JsonPropertyName("companyName")] public string CompanyName { get; set; } = "";
+    [JsonPropertyName("level")] public string Level { get; set; } = "";
+    [JsonPropertyName("createdAt")] public string CreatedAt { get; set; } = "";
 }

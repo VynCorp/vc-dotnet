@@ -1,49 +1,54 @@
-using System.Text.Json;
 using VynCo.Models;
 
 namespace VynCo.Resources;
 
-/// <summary>Analytics resource — clustering, anomaly detection, cohort analysis, and segmentation.</summary>
+/// <summary>Analytics resource — cantons, auditors, clustering, anomalies, RFM, cohorts, candidates.</summary>
 public class AnalyticsResource
 {
     private readonly VynCoClient _client;
     internal AnalyticsResource(VynCoClient client) => _client = client;
 
-    /// <summary>Run K-Means clustering on companies. Cost: 25 credits.</summary>
-    public Task<JsonElement> ClusterAsync(ClusteringRequest request, CancellationToken ct = default)
-        => _client.RequestAsync<JsonElement>(HttpMethod.Post, "/api/v1/analytics/cluster", request, ct);
+    /// <summary>Get aggregate analytics broken down by Swiss canton.</summary>
+    public Task<List<CantonDistribution>> CantonsAsync(CancellationToken ct = default)
+        => _client.RequestListAsync<CantonDistribution>(HttpMethod.Get, "/v1/analytics/cantons", ct);
 
-    /// <summary>Detect statistical anomalies in company data using DBSCAN. Cost: 20 credits.</summary>
-    public Task<JsonElement> DetectAnomaliesAsync(AnomalyDetectionRequest? request = null, CancellationToken ct = default)
-        => _client.RequestAsync<JsonElement>(HttpMethod.Post, "/api/v1/analytics/anomalies", request, ct);
+    /// <summary>Get auditor market share analytics.</summary>
+    public Task<List<AuditorMarketShare>> AuditorsAsync(CancellationToken ct = default)
+        => _client.RequestListAsync<AuditorMarketShare>(HttpMethod.Get, "/v1/analytics/auditors", ct);
 
-    /// <summary>Get cohort analytics — companies grouped by founding year, canton, legal form, etc. Cost: 10 credits.</summary>
-    public Task<JsonElement> CohortsAsync(CohortAnalyticsParams? @params = null, CancellationToken ct = default)
+    /// <summary>Run clustering analysis on companies.</summary>
+    public Task<ClusterResponse> ClusterAsync(ClusterRequest request, CancellationToken ct = default)
+        => _client.RequestAsync<ClusterResponse>(HttpMethod.Post, "/v1/analytics/cluster", request, ct);
+
+    /// <summary>Detect anomalies in company data.</summary>
+    public Task<AnomalyResponse> AnomaliesAsync(AnomalyRequest request, CancellationToken ct = default)
+        => _client.RequestAsync<AnomalyResponse>(HttpMethod.Post, "/v1/analytics/anomalies", request, ct);
+
+    /// <summary>Get RFM (Recency, Frequency, Monetary) segments.</summary>
+    public Task<RfmSegmentsResponse> RfmSegmentsAsync(CancellationToken ct = default)
+        => _client.RequestAsync<RfmSegmentsResponse>(HttpMethod.Get, "/v1/analytics/rfm-segments", ct);
+
+    /// <summary>Get cohort analysis.</summary>
+    public Task<CohortResponse> CohortsAsync(CohortParams? @params = null, CancellationToken ct = default)
     {
-        var query = "";
-        var sep = "?";
-        if (@params?.GroupBy is not null) { query += $"{sep}groupBy={Uri.EscapeDataString(@params.GroupBy)}"; sep = "&"; }
-        if (@params?.Canton is not null) { query += $"{sep}canton={Uri.EscapeDataString(@params.Canton)}"; }
+        var qs = new List<string>();
+        if (@params?.GroupBy is not null) qs.Add($"groupBy={Uri.EscapeDataString(@params.GroupBy)}");
+        if (@params?.Metric is not null) qs.Add($"metric={Uri.EscapeDataString(@params.Metric)}");
+        var query = qs.Count > 0 ? "?" + string.Join("&", qs) : "";
 
-        return _client.RequestAsync<JsonElement>(HttpMethod.Get, $"/api/v1/analytics/cohorts{query}", ct);
+        return _client.RequestAsync<CohortResponse>(HttpMethod.Get, $"/v1/analytics/cohorts{query}", ct);
     }
 
-    /// <summary>Get aggregate analytics broken down by Swiss canton. Cost: 3 credits.</summary>
-    public Task<JsonElement> CantonsAsync(CancellationToken ct = default)
-        => _client.RequestAsync<JsonElement>(HttpMethod.Get, "/api/v1/analytics/cantons", ct);
-
-    /// <summary>Get analytics on auditor categories and distribution. Cost: 3 credits.</summary>
-    public Task<JsonElement> AuditorsAsync(CancellationToken ct = default)
-        => _client.RequestAsync<JsonElement>(HttpMethod.Get, "/api/v1/analytics/auditors", ct);
-
-    /// <summary>Get RFM (Recency, Frequency, Monetary) segments for companies. Cost: 15 credits.</summary>
-    public Task<JsonElement> RfmSegmentsAsync(CancellationToken ct = default)
-        => _client.RequestAsync<JsonElement>(HttpMethod.Get, "/api/v1/analytics/rfm-segments", ct);
-
-    /// <summary>Get the rate and volume of commercial register changes over time. Cost: 5 credits.</summary>
-    public Task<JsonElement> VelocityAsync(VelocityParams? @params = null, CancellationToken ct = default)
+    /// <summary>Get audit candidates with pagination.</summary>
+    public Task<PagedResponse<AuditCandidate>> CandidatesAsync(CandidateParams? @params = null, CancellationToken ct = default)
     {
-        var days = @params?.Days ?? 30;
-        return _client.RequestAsync<JsonElement>(HttpMethod.Get, $"/api/v1/analytics/velocity?days={days}", ct);
+        var qs = new List<string>();
+        if (@params?.SortBy is not null) qs.Add($"sortBy={Uri.EscapeDataString(@params.SortBy)}");
+        if (@params?.Canton is not null) qs.Add($"canton={Uri.EscapeDataString(@params.Canton)}");
+        if (@params?.Page is not null) qs.Add($"page={@params.Page}");
+        if (@params?.PageSize is not null) qs.Add($"pageSize={@params.PageSize}");
+        var query = qs.Count > 0 ? "?" + string.Join("&", qs) : "";
+
+        return _client.RequestAsync<PagedResponse<AuditCandidate>>(HttpMethod.Get, $"/v1/analytics/candidates{query}", ct);
     }
 }

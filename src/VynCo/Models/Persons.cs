@@ -2,44 +2,16 @@ using System.Text.Json.Serialization;
 
 namespace VynCo.Models;
 
-public class Person
-{
-    [JsonPropertyName("id")] public Guid Id { get; set; }
-    [JsonPropertyName("name")] public string? Name { get; set; }
-    [JsonPropertyName("fullName")] public string? FullName { get; set; }
-    [JsonPropertyName("firstName")] public string? FirstName { get; set; }
-    [JsonPropertyName("lastName")] public string? LastName { get; set; }
-    [JsonPropertyName("placeOfOrigin")] public string? PlaceOfOrigin { get; set; }
-    [JsonPropertyName("residence")] public string? Residence { get; set; }
-    [JsonPropertyName("roles")] public List<string>? Roles { get; set; }
-    [JsonPropertyName("companies")] public List<string>? Companies { get; set; }
-    [JsonPropertyName("roleCount")] public int RoleCount { get; set; }
-    [JsonPropertyName("activeRoleCount")] public int ActiveRoleCount { get; set; }
-}
-
-public class PersonConnection
-{
-    [JsonPropertyName("personId")] public Guid PersonId { get; set; }
-    [JsonPropertyName("companyUid")] public string CompanyUid { get; set; } = "";
-    [JsonPropertyName("companyName")] public string CompanyName { get; set; } = "";
-    [JsonPropertyName("roleDescription")] public string RoleDescription { get; set; } = "";
-    [JsonPropertyName("category")] public string Category { get; set; } = "";
-    [JsonPropertyName("signatureAuthority")] public string SignatureAuthority { get; set; } = "";
-    [JsonPropertyName("startDate")] public DateTime? StartDate { get; set; }
-    [JsonPropertyName("endDate")] public DateTime? EndDate { get; set; }
-    [JsonPropertyName("isActive")] public bool IsActive { get; set; }
-}
-
+/// <summary>A board member of a company.</summary>
 public class BoardMember
 {
-    [JsonPropertyName("person")] public Person Person { get; set; } = new();
-    [JsonPropertyName("role")] public PersonConnection Role { get; set; } = new();
-}
-
-/// <summary>Parameters for listing persons with pagination.</summary>
-public class ListPersonsParams
-{
-    public int Page { get; set; } = 1;
-    public int PageSize { get; set; } = 25;
-    public string? Search { get; set; }
+    [JsonPropertyName("id")] public string Id { get; set; } = "";
+    [JsonPropertyName("firstName")] public string? FirstName { get; set; }
+    [JsonPropertyName("lastName")] public string? LastName { get; set; }
+    [JsonPropertyName("role")] public string Role { get; set; } = "";
+    [JsonPropertyName("roleCategory")] public string RoleCategory { get; set; } = "";
+    [JsonPropertyName("origin")] public string? Origin { get; set; }
+    [JsonPropertyName("residence")] public string? Residence { get; set; }
+    [JsonPropertyName("signingAuthority")] public string? SigningAuthority { get; set; }
+    [JsonPropertyName("since")] public string? Since { get; set; }
 }

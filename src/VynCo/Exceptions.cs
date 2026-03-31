@@ -93,8 +93,14 @@ public class VynCoResponseHeaders
     /// <summary>Credit balance remaining after the operation.</summary>
     public int? CreditsRemaining { get; set; }
 
-    /// <summary>Rate limit ceiling for the current tier (requests per minute).</summary>
+    /// <summary>Maximum requests per minute for the current tier.</summary>
     public int? RateLimitLimit { get; set; }
+
+    /// <summary>Remaining requests in the current rate limit window.</summary>
+    public int? RateLimitRemaining { get; set; }
+
+    /// <summary>Unix timestamp when the rate limit window resets.</summary>
+    public long? RateLimitReset { get; set; }
 
     /// <summary>Data source attribution header.</summary>
     public string? DataSource { get; set; }

@@ -1,46 +1,38 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace VynCo.Models;
 
-public class Change
+/// <summary>A detected change to a company record.</summary>
+public class CompanyChange
 {
-    [JsonPropertyName("id")] public Guid Id { get; set; }
+    [JsonPropertyName("id")] public string Id { get; set; } = "";
     [JsonPropertyName("companyUid")] public string CompanyUid { get; set; } = "";
     [JsonPropertyName("companyName")] public string? CompanyName { get; set; }
     [JsonPropertyName("changeType")] public string ChangeType { get; set; } = "";
     [JsonPropertyName("fieldName")] public string? FieldName { get; set; }
     [JsonPropertyName("oldValue")] public string? OldValue { get; set; }
     [JsonPropertyName("newValue")] public string? NewValue { get; set; }
-    [JsonPropertyName("sogcId")] public string? SogcId { get; set; }
-    [JsonPropertyName("detectedAt")] public DateTime DetectedAt { get; set; }
-    [JsonPropertyName("isReviewed")] public bool IsReviewed { get; set; }
-    [JsonPropertyName("reviewedBy")] public string? ReviewedBy { get; set; }
-    [JsonPropertyName("isFlagged")] public bool IsFlagged { get; set; }
+    [JsonPropertyName("description")] public string? Description { get; set; }
+    [JsonPropertyName("source")] public string? Source { get; set; }
+    [JsonPropertyName("detectedAt")] public string DetectedAt { get; set; } = "";
 }
 
 public class ChangeStatistics
 {
-    [JsonPropertyName("totalCount")] public int TotalCount { get; set; }
-    [JsonPropertyName("reviewedCount")] public int ReviewedCount { get; set; }
-    [JsonPropertyName("flaggedCount")] public int FlaggedCount { get; set; }
-    [JsonPropertyName("changeTypeCounts")] public Dictionary<string, int> ChangeTypeCounts { get; set; } = new();
+    [JsonPropertyName("totalChanges")] public long TotalChanges { get; set; }
+    [JsonPropertyName("changesThisWeek")] public long ChangesThisWeek { get; set; }
+    [JsonPropertyName("changesThisMonth")] public long ChangesThisMonth { get; set; }
+    [JsonPropertyName("byType")] public JsonElement ByType { get; set; }
 }
 
-public class ReviewChangeRequest
+/// <summary>Query parameters for listing changes.</summary>
+public class ChangeListParams
 {
-    [JsonPropertyName("reviewNotes")] public string? ReviewNotes { get; set; }
-}
-
-public class ReviewResult
-{
-    [JsonPropertyName("reviewed")] public bool Reviewed { get; set; }
-    [JsonPropertyName("changeId")] public Guid ChangeId { get; set; }
-}
-
-/// <summary>Parameters for listing changes with pagination.</summary>
-public class ListChangesParams
-{
-    public int Page { get; set; } = 1;
-    public int PageSize { get; set; } = 25;
-    public string? CompanyUid { get; set; }
+    public string? ChangeType { get; set; }
+    public string? Since { get; set; }
+    public string? Until { get; set; }
+    public string? CompanySearch { get; set; }
+    public long? Page { get; set; }
+    public long? PageSize { get; set; }
 }
