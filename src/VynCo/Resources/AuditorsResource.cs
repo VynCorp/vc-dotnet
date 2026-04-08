@@ -1,3 +1,4 @@
+using System.Globalization;
 using VynCo.Models;
 
 namespace VynCo.Resources;
@@ -16,7 +17,7 @@ public class AuditorsResource
     public Task<PagedResponse<AuditorTenure>> TenuresAsync(AuditorTenureParams? @params = null, CancellationToken ct = default)
     {
         var qs = new List<string>();
-        if (@params?.MinYears.HasValue == true) qs.Add($"minYears={@params.MinYears.Value}");
+        if (@params?.MinYears.HasValue == true) qs.Add($"minYears={@params.MinYears.Value.ToString(CultureInfo.InvariantCulture)}");
         if (@params?.Canton is not null) qs.Add($"canton={Uri.EscapeDataString(@params.Canton)}");
         if (@params?.Page is not null) qs.Add($"page={@params.Page}");
         if (@params?.PageSize is not null) qs.Add($"pageSize={@params.PageSize}");

@@ -35,4 +35,8 @@ public class TeamsResource
     /// <summary>Get billing summary for the current team.</summary>
     public Task<BillingSummary> BillingSummaryAsync(CancellationToken ct = default)
         => _client.RequestAsync<BillingSummary>(HttpMethod.Get, "/v1/teams/me/billing-summary", ct);
+
+    /// <summary>Join a team via invitation token.</summary>
+    public Task<JoinTeamResponse> JoinAsync(JoinTeamRequest request, CancellationToken ct = default)
+        => _client.RequestAsync<JoinTeamResponse>(HttpMethod.Post, "/v1/teams/join", request, ct);
 }

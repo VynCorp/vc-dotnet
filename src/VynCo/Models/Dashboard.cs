@@ -15,30 +15,39 @@ public class DashboardResponse
 public class DataCompleteness
 {
     [JsonPropertyName("totalCompanies")] public long TotalCompanies { get; set; }
-    [JsonPropertyName("withCanton")] public long WithCanton { get; set; }
-    [JsonPropertyName("withStatus")] public long WithStatus { get; set; }
-    [JsonPropertyName("withLegalForm")] public long WithLegalForm { get; set; }
-    [JsonPropertyName("withCapital")] public long WithCapital { get; set; }
-    [JsonPropertyName("withIndustry")] public long WithIndustry { get; set; }
-    [JsonPropertyName("withAuditor")] public long WithAuditor { get; set; }
-    [JsonPropertyName("completenessPct")] public double CompletenessPct { get; set; }
+    [JsonPropertyName("enrichedCompanies")] public long EnrichedCompanies { get; set; }
+    [JsonPropertyName("companiesWithIndustry")] public long CompaniesWithIndustry { get; set; }
+    [JsonPropertyName("companiesWithGeo")] public long CompaniesWithGeo { get; set; }
+    [JsonPropertyName("totalPersons")] public long TotalPersons { get; set; }
+    [JsonPropertyName("totalChanges")] public long TotalChanges { get; set; }
+    [JsonPropertyName("totalSogcPublications")] public long TotalSogcPublications { get; set; }
 }
 
 /// <summary>Pipeline run status.</summary>
 public class PipelineStatus
 {
-    [JsonPropertyName("name")] public string Name { get; set; } = "";
-    [JsonPropertyName("lastRun")] public string? LastRun { get; set; }
+    [JsonPropertyName("id")] public string Id { get; set; } = "";
     [JsonPropertyName("status")] public string Status { get; set; } = "";
-    [JsonPropertyName("recordsProcessed")] public long? RecordsProcessed { get; set; }
-    [JsonPropertyName("durationSeconds")] public double? DurationSeconds { get; set; }
+    [JsonPropertyName("itemsProcessed")] public int ItemsProcessed { get; set; }
+    [JsonPropertyName("lastCompletedAt")] public string? LastCompletedAt { get; set; }
 }
 
 /// <summary>Auditor tenure aggregate statistics.</summary>
 public class AuditorTenureStats
 {
-    [JsonPropertyName("totalTenures")] public long TotalTenures { get; set; }
-    [JsonPropertyName("longTenures7plus")] public long LongTenures7Plus { get; set; }
+    [JsonPropertyName("totalTracked")] public long TotalTracked { get; set; }
+    [JsonPropertyName("currentAuditors")] public long CurrentAuditors { get; set; }
+    [JsonPropertyName("tenuresOver10Years")] public long TenuresOver10Years { get; set; }
+    [JsonPropertyName("tenuresOver7Years")] public long TenuresOver7Years { get; set; }
     [JsonPropertyName("avgTenureYears")] public double AvgTenureYears { get; set; }
-    [JsonPropertyName("maxTenureYears")] public double MaxTenureYears { get; set; }
+    [JsonPropertyName("longestTenure")] public LongestTenure? LongestTenure { get; set; }
+}
+
+/// <summary>The longest auditor tenure.</summary>
+public class LongestTenure
+{
+    [JsonPropertyName("companyUid")] public string CompanyUid { get; set; } = "";
+    [JsonPropertyName("companyName")] public string CompanyName { get; set; } = "";
+    [JsonPropertyName("auditorName")] public string AuditorName { get; set; } = "";
+    [JsonPropertyName("tenureYears")] public double TenureYears { get; set; }
 }

@@ -5,6 +5,36 @@ All notable changes to the VynCo .NET SDK will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] - 2026-04-08
+
+Major release aligned with the Rust SDK v2.2.0 and the production VynCo API.
+
+### Added
+
+- **Companies resource** — `GetFullAsync` (full company with persons/changes/relationships), `ClassificationAsync` (industry classification), `StructureAsync` (corporate structure), `AcquisitionsAsync`, `NotesAsync`, `CreateNoteAsync`, `UpdateNoteAsync`, `DeleteNoteAsync`, `TagsAsync`, `CreateTagAsync`, `DeleteTagAsync`, `AllTagsAsync`, `ExportExcelAsync` — 13 new methods
+- **Persons resource** — `SearchAsync` (paged person search), `GetAsync` (detailed person record with roles) — 2 new methods
+- **Dossiers resource** — `GenerateAsync` (generate dossier for a company by UID)
+- **Teams resource** — `JoinAsync` (join a team via invitation token)
+- **CompanyListParams** — new filter fields: `Status`, `LegalForm`, `CapitalMin`, `CapitalMax`, `AuditorCategory`, `SortBy`, `SortDesc`
+- **Company model** — expanded to 39 fields matching the API: `Currency`, `Purpose`, `FoundingDate`, `RegistrationDate`, `DeletionDate`, `LegalSeat`, `Municipality`, `DataSource`, `EnrichmentLevel`, `AddressStreet`, `AddressHouseNumber`, `AddressZipCode`, `AddressCity`, `AddressCanton`, `Website`, `SubIndustry`, `EmployeeCount`, `AuditorName`, `Latitude`, `Longitude`, `GeoPrecision`, `NogaCode`, `SanctionsHit`, `LastScreenedAt`, `IsFinmaRegulated`, `Ehraid`, `Chid`, `CantonalExcerptUrl`, `OldNames`, `Translations`
+- New models: `CompanyFullResponse`, `PersonEntry`, `ChangeEntry`, `RelationshipEntry`, `Classification`, `CorporateStructure`, `RelatedCompanyEntry`, `Acquisition`, `Note`, `CreateNoteRequest`, `UpdateNoteRequest`, `Tag`, `CreateTagRequest`, `TagSummary`, `ExcelExportRequest`, `ExcelExportFilter`, `PersonSearchParams`, `PersonSearchResult`, `PersonDetail`, `PersonRoleDetail`, `JoinTeamRequest`, `JoinTeamResponse`, `LongestTenure`
+- Retry logic now falls back to `X-RateLimit-Reset` header when `Retry-After` is absent, capped at 60 seconds
+- `RequestBytesAsync` now supports POST with body (for Excel export)
+
+### Changed
+
+- **BREAKING:** Default base URL changed from `https://api.vynco.ch` to `https://vynco.ch/api` (production deployment)
+- **BREAKING:** `DataCompleteness` model — fields replaced: `WithCanton`/`WithStatus`/`WithLegalForm`/`WithCapital`/`WithIndustry`/`WithAuditor`/`CompletenessPct` → `EnrichedCompanies`/`CompaniesWithIndustry`/`CompaniesWithGeo`/`TotalPersons`/`TotalChanges`/`TotalSogcPublications`
+- **BREAKING:** `PipelineStatus` model — fields replaced: `Name`/`LastRun`/`RecordsProcessed`/`DurationSeconds` → `Id`/`ItemsProcessed`/`LastCompletedAt`
+- **BREAKING:** `AuditorTenureStats` model — fields replaced: `TotalTenures`/`LongTenures7Plus`/`MaxTenureYears` → `TotalTracked`/`CurrentAuditors`/`TenuresOver10Years`/`TenuresOver7Years`/`LongestTenure`
+- **BREAKING:** `AiSearchResponse.Results` changed from `List<Company>` to `List<JsonElement>` (matching API response)
+- **BREAKING:** `CreditBalance.UsedThisMonth` changed from `int` to `long`
+- **BREAKING:** `BillingSummary.UsedThisMonth` changed from `int` to `long`
+- **BREAKING:** `MemberUsage.CreditsUsed` changed from `int` to `long`
+- SDK user-agent updated to `vynco-dotnet/3.0.0`
+- Package version bumped to 3.0.0
+- Total endpoints: 69 → 86
+
 ## [2.0.0] - 2026-03-31
 
 Major release aligned with the VynCo API v2 (`/v1`). All resources, DTOs, and endpoints updated to match the Rust SDK v2.0.0.
@@ -132,6 +162,7 @@ First stable release aligned with the finalized VynCo API v1 (`/api/v1`).
 - `BatchLookupRequest` for batch operations
 - Multi-targeting: `netstandard2.0` and `net10.0`
 
+[3.0.0]: https://github.com/VynCorp/vc-dotnet/compare/v2.0.0...v3.0.0
 [2.0.0]: https://github.com/VynCorp/vc-dotnet/compare/v1.0.0...v2.0.0
 [1.0.0]: https://github.com/VynCorp/vc-dotnet/compare/v0.1.0...v1.0.0
 [0.1.0]: https://github.com/VynCorp/vc-dotnet/releases/tag/v0.1.0

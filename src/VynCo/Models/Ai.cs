@@ -32,7 +32,7 @@ public class AiSearchResponse
     [JsonPropertyName("query")] public string Query { get; set; } = "";
     [JsonPropertyName("explanation")] public string Explanation { get; set; } = "";
     [JsonPropertyName("filtersApplied")] public JsonElement FiltersApplied { get; set; }
-    [JsonPropertyName("results")] public List<Company> Results { get; set; } = new();
+    [JsonPropertyName("results")] public List<JsonElement> Results { get; set; } = new();
     [JsonPropertyName("total")] public long Total { get; set; }
 }
 

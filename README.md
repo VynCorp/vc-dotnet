@@ -31,6 +31,10 @@ Console.WriteLine($"Found {result.Total} companies");
 var company = await client.Companies.GetAsync("CHE-105.805.080");
 Console.WriteLine($"{company.Name}: {company.LegalForm}");
 
+// Full company with persons and changes
+var full = await client.Companies.GetFullAsync("CHE-105.805.080");
+Console.WriteLine($"Persons: {full.Persons.Count}, Changes: {full.RecentChanges.Count}");
+
 // Sanctions screening
 var screening = await client.Screening.ScreenAsync(
     new ScreeningRequest { Name = "Suspicious Corp" });
@@ -48,12 +52,12 @@ Console.WriteLine($"Credits remaining: {credits.Balance}");
 
 ## API Coverage
 
-18 resource modules covering 69 endpoints:
+18 resource modules covering 86 endpoints:
 
 | Resource | Methods |
 |----------|---------|
 | `client.Health` | `CheckAsync` |
-| `client.Companies` | `ListAsync`, `GetAsync`, `CountAsync`, `EventsAsync`, `StatisticsAsync`, `CompareAsync`, `NewsAsync`, `ReportsAsync`, `RelationshipsAsync`, `HierarchyAsync`, `FingerprintAsync`, `NearbyAsync` |
+| `client.Companies` | `ListAsync`, `GetAsync`, `GetFullAsync`, `CountAsync`, `EventsAsync`, `StatisticsAsync`, `CompareAsync`, `NewsAsync`, `ReportsAsync`, `RelationshipsAsync`, `HierarchyAsync`, `ClassificationAsync`, `FingerprintAsync`, `StructureAsync`, `AcquisitionsAsync`, `NearbyAsync`, `NotesAsync`, `CreateNoteAsync`, `UpdateNoteAsync`, `DeleteNoteAsync`, `TagsAsync`, `CreateTagAsync`, `DeleteTagAsync`, `AllTagsAsync`, `ExportExcelAsync` |
 | `client.Auditors` | `HistoryAsync`, `TenuresAsync` |
 | `client.Dashboard` | `GetAsync` |
 | `client.Screening` | `ScreenAsync` |
@@ -64,11 +68,11 @@ Console.WriteLine($"Credits remaining: {credits.Balance}");
 | `client.ApiKeys` | `ListAsync`, `CreateAsync`, `RevokeAsync` |
 | `client.Credits` | `BalanceAsync`, `UsageAsync`, `HistoryAsync` |
 | `client.Billing` | `CreateCheckoutAsync`, `CreatePortalAsync` |
-| `client.Teams` | `MeAsync`, `CreateAsync`, `MembersAsync`, `InviteMemberAsync`, `UpdateMemberRoleAsync`, `RemoveMemberAsync`, `BillingSummaryAsync` |
+| `client.Teams` | `MeAsync`, `CreateAsync`, `MembersAsync`, `InviteMemberAsync`, `UpdateMemberRoleAsync`, `RemoveMemberAsync`, `BillingSummaryAsync`, `JoinAsync` |
 | `client.Changes` | `ListAsync`, `ByCompanyAsync`, `StatisticsAsync` |
-| `client.Persons` | `BoardMembersAsync` |
+| `client.Persons` | `BoardMembersAsync`, `SearchAsync`, `GetAsync` |
 | `client.Analytics` | `CantonsAsync`, `AuditorsAsync`, `ClusterAsync`, `AnomaliesAsync`, `RfmSegmentsAsync`, `CohortsAsync`, `CandidatesAsync` |
-| `client.Dossiers` | `CreateAsync`, `ListAsync`, `GetAsync`, `DeleteAsync` |
+| `client.Dossiers` | `CreateAsync`, `ListAsync`, `GetAsync`, `DeleteAsync`, `GenerateAsync` |
 | `client.Graph` | `GetAsync`, `ExportAsync`, `AnalyzeAsync` |
 
 ## Response Metadata
@@ -93,13 +97,13 @@ Console.WriteLine($"Data source:         {h?.DataSource}");         // X-Data-So
 ```csharp
 using var client = new VynCoClient(
     apiKey: "vc_live_your_api_key",
-    baseUrl: "https://api.vynco.ch",  // default
-    maxRetries: 2,                     // default; retries on 429 and 5xx
-    timeout: TimeSpan.FromSeconds(30)  // default
+    baseUrl: "https://vynco.ch/api",    // default
+    maxRetries: 2,                       // default; retries on 429 and 5xx
+    timeout: TimeSpan.FromSeconds(30)    // default
 );
 ```
 
-The client automatically retries on HTTP 429 (rate limited) and 5xx (server error) with exponential backoff (500ms x 2^attempt). It respects the `Retry-After` header when present.
+The client automatically retries on HTTP 429 (rate limited) and 5xx (server error) with exponential backoff (500ms x 2^attempt). It respects the `Retry-After` header, falls back to `X-RateLimit-Reset`, and caps retry delay at 60 seconds.
 
 ## Error Handling
 

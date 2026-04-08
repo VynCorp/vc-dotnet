@@ -23,4 +23,8 @@ public class DossiersResource
     /// <summary>Delete a dossier.</summary>
     public Task DeleteAsync(string id, CancellationToken ct = default)
         => _client.RequestVoidAsync(HttpMethod.Delete, $"/v1/dossiers/{Uri.EscapeDataString(id)}", ct);
+
+    /// <summary>Generate a dossier for a company by UID.</summary>
+    public Task<Dossier> GenerateAsync(string uid, CancellationToken ct = default)
+        => _client.RequestAsync<Dossier>(HttpMethod.Post, $"/v1/dossiers/{Uri.EscapeDataString(uid)}/generate", ct);
 }

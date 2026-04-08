@@ -16,7 +16,7 @@ public class VynCoClient : IDisposable
     private readonly int _maxRetries;
     private bool _disposed;
 
-    public const string SdkVersion = "2.0.0";
+    public const string SdkVersion = "3.0.0";
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -29,7 +29,7 @@ public class VynCoClient : IDisposable
 
     /// <summary>Health resource — API health check.</summary>
     public HealthResource Health { get; }
-    /// <summary>Companies resource — list, get, count, events, statistics, compare, news, reports, relationships, hierarchy, fingerprint, nearby.</summary>
+    /// <summary>Companies resource — list, get, full, count, events, statistics, compare, news, reports, relationships, hierarchy, classification, fingerprint, structure, acquisitions, nearby, notes, tags, excel export.</summary>
     public CompaniesResource Companies { get; }
     /// <summary>Auditors resource — auditor history and tenures.</summary>
     public AuditorsResource Auditors { get; }
@@ -51,15 +51,15 @@ public class VynCoClient : IDisposable
     public CreditsResource Credits { get; }
     /// <summary>Billing resource — Stripe checkout and portal sessions.</summary>
     public BillingResource Billing { get; }
-    /// <summary>Teams resource — create, get, manage members, billing summary.</summary>
+    /// <summary>Teams resource — create, get, manage members, billing summary, join.</summary>
     public TeamsResource Teams { get; }
     /// <summary>Changes resource — list, get by company, statistics.</summary>
     public ChangesResource Changes { get; }
-    /// <summary>Persons resource — board members.</summary>
+    /// <summary>Persons resource — board members, search, get details.</summary>
     public PersonsResource Persons { get; }
     /// <summary>Analytics resource — cantons, auditors, clustering, anomalies, RFM, cohorts, candidates.</summary>
     public AnalyticsResource Analytics { get; }
-    /// <summary>Dossiers resource — create, list, get, delete managed dossiers.</summary>
+    /// <summary>Dossiers resource — create, list, get, delete, generate managed dossiers.</summary>
     public DossiersResource Dossiers { get; }
     /// <summary>Graph resource — network graphs and analysis.</summary>
     public GraphResource Graph { get; }
@@ -67,7 +67,7 @@ public class VynCoClient : IDisposable
     /// <summary>Headers from the most recent API response (request-id, credits, rate-limit).</summary>
     public VynCoResponseHeaders? LastResponseHeaders { get; private set; }
 
-    public VynCoClient(string apiKey, string baseUrl = "https://api.vynco.ch", int maxRetries = 2, TimeSpan? timeout = null)
+    public VynCoClient(string apiKey, string baseUrl = "https://vynco.ch/api", int maxRetries = 2, TimeSpan? timeout = null)
     {
         if (string.IsNullOrWhiteSpace(apiKey))
             throw new ArgumentException("API key is required.", nameof(apiKey));
@@ -110,15 +110,15 @@ public class VynCoClient : IDisposable
     internal async Task<T> RequestAsync<T>(HttpMethod method, string path, object? body, CancellationToken ct = default)
     {
         var url = $"{_baseUrl}{path}";
+        var bodyJson = body is not null ? JsonSerializer.Serialize(body, JsonOptions) : null;
         Exception? lastException = null;
 
         for (int attempt = 0; attempt <= _maxRetries; attempt++)
         {
             using var request = new HttpRequestMessage(method, url);
-            if (body is not null)
+            if (bodyJson is not null)
             {
-                var json = JsonSerializer.Serialize(body, JsonOptions);
-                request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+                request.Content = new StringContent(bodyJson, Encoding.UTF8, "application/json");
             }
 
             HttpResponseMessage response;
@@ -131,7 +131,7 @@ public class VynCoClient : IDisposable
                 lastException = ex;
                 if (attempt < _maxRetries)
                 {
-                    await Task.Delay(Backoff(attempt), ct).ConfigureAwait(false);
+                    await Task.Delay(GetRetryDelay(attempt, null), ct).ConfigureAwait(false);
                     continue;
                 }
                 throw new VynCoException($"HTTP request failed: {ex.Message}");
@@ -141,8 +141,9 @@ public class VynCoClient : IDisposable
 
             if (ShouldRetry(response.StatusCode) && attempt < _maxRetries)
             {
+                var delay = GetRetryDelay(attempt, LastResponseHeaders);
                 response.Dispose();
-                await Task.Delay(Backoff(attempt), ct).ConfigureAwait(false);
+                await Task.Delay(delay, ct).ConfigureAwait(false);
                 continue;
             }
 
@@ -192,13 +193,22 @@ public class VynCoClient : IDisposable
         return ExtractList<T>(value);
     }
 
-    internal async Task<ExportFile> RequestBytesAsync(string path, CancellationToken ct = default)
+    internal Task<ExportFile> RequestBytesAsync(string path, CancellationToken ct = default)
+        => RequestBytesAsync(path, body: null, ct);
+
+    internal async Task<ExportFile> RequestBytesAsync(string path, object? body, CancellationToken ct = default)
     {
         var url = $"{_baseUrl}{path}";
+        var method = body is not null ? HttpMethod.Post : HttpMethod.Get;
+        var bodyJson = body is not null ? JsonSerializer.Serialize(body, JsonOptions) : null;
 
         for (int attempt = 0; attempt <= _maxRetries; attempt++)
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            using var request = new HttpRequestMessage(method, url);
+            if (bodyJson is not null)
+            {
+                request.Content = new StringContent(bodyJson, Encoding.UTF8, "application/json");
+            }
 
             HttpResponseMessage response;
             try
@@ -209,7 +219,7 @@ public class VynCoClient : IDisposable
             {
                 if (attempt < _maxRetries)
                 {
-                    await Task.Delay(Backoff(attempt), ct).ConfigureAwait(false);
+                    await Task.Delay(GetRetryDelay(attempt, null), ct).ConfigureAwait(false);
                     continue;
                 }
                 throw new VynCoException($"HTTP request failed: {ex.Message}");
@@ -219,8 +229,9 @@ public class VynCoClient : IDisposable
 
             if (ShouldRetry(response.StatusCode) && attempt < _maxRetries)
             {
+                var delay = GetRetryDelay(attempt, LastResponseHeaders);
                 response.Dispose();
-                await Task.Delay(Backoff(attempt), ct).ConfigureAwait(false);
+                await Task.Delay(delay, ct).ConfigureAwait(false);
                 continue;
             }
 
@@ -292,17 +303,17 @@ public class VynCoClient : IDisposable
     private static List<T> ExtractList<T>(JsonElement value)
     {
         if (value.ValueKind == JsonValueKind.Array)
-            return JsonSerializer.Deserialize<List<T>>(value.GetRawText(), JsonOptions) ?? new();
+            return value.Deserialize<List<T>>(JsonOptions) ?? new();
 
         if (value.ValueKind == JsonValueKind.Object)
         {
             if (value.TryGetProperty("data", out var dataArr) && dataArr.ValueKind == JsonValueKind.Array)
-                return JsonSerializer.Deserialize<List<T>>(dataArr.GetRawText(), JsonOptions) ?? new();
+                return dataArr.Deserialize<List<T>>(JsonOptions) ?? new();
 
             foreach (var prop in value.EnumerateObject())
             {
                 if (prop.Value.ValueKind == JsonValueKind.Array)
-                    return JsonSerializer.Deserialize<List<T>>(prop.Value.GetRawText(), JsonOptions) ?? new();
+                    return prop.Value.Deserialize<List<T>>(JsonOptions) ?? new();
             }
         }
 
@@ -312,8 +323,29 @@ public class VynCoClient : IDisposable
     private static bool ShouldRetry(HttpStatusCode status)
         => status == (HttpStatusCode)429 || (int)status >= 500;
 
-    private static TimeSpan Backoff(int attempt)
-        => TimeSpan.FromMilliseconds(500 * Math.Pow(2, attempt));
+    private static readonly TimeSpan MaxRetryDelay = TimeSpan.FromSeconds(60);
+
+    private static TimeSpan GetRetryDelay(int attempt, VynCoResponseHeaders? headers)
+    {
+        // Prefer Retry-After header
+        if (headers?.RetryAfter is > 0)
+            return Clamp(TimeSpan.FromSeconds(headers.RetryAfter.Value));
+
+        // Fall back to X-RateLimit-Reset (unix timestamp)
+        if (headers?.RateLimitReset is > 0)
+        {
+            var resetTime = DateTimeOffset.FromUnixTimeSeconds(headers.RateLimitReset.Value);
+            var wait = resetTime - DateTimeOffset.UtcNow;
+            if (wait > TimeSpan.Zero)
+                return Clamp(wait);
+        }
+
+        // Default: exponential backoff 500ms * 2^attempt
+        return Clamp(TimeSpan.FromMilliseconds(500 * Math.Pow(2, attempt)));
+    }
+
+    private static TimeSpan Clamp(TimeSpan delay)
+        => delay > MaxRetryDelay ? MaxRetryDelay : delay;
 
     private static VynCoException MapException(HttpStatusCode status, string body)
     {

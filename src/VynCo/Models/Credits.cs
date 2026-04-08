@@ -7,7 +7,7 @@ public class CreditBalance
 {
     [JsonPropertyName("balance")] public int Balance { get; set; }
     [JsonPropertyName("monthlyCredits")] public long MonthlyCredits { get; set; }
-    [JsonPropertyName("usedThisMonth")] public int UsedThisMonth { get; set; }
+    [JsonPropertyName("usedThisMonth")] public long UsedThisMonth { get; set; }
     [JsonPropertyName("tier")] public string Tier { get; set; } = "";
     [JsonPropertyName("overageRate")] public double OverageRate { get; set; }
 }

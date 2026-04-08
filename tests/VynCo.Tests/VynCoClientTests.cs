@@ -436,14 +436,14 @@ public class VynCoClientTests
     public async Task Dashboard_Get_ReturnsDashboard()
     {
         var handler = new MockHttpHandler(HttpStatusCode.OK,
-            """{"generatedAt":"2024-01-01","data":{"totalCompanies":500000,"completenessPct":85.5},"pipelines":[],"auditorTenures":{"totalTenures":100000,"avgTenureYears":4.5,"maxTenureYears":30.0,"longTenures7plus":15000}}""");
+            """{"generatedAt":"2024-01-01","data":{"totalCompanies":500000,"enrichedCompanies":400000,"companiesWithIndustry":300000,"companiesWithGeo":200000,"totalPersons":100000,"totalChanges":50000,"totalSogcPublications":25000},"pipelines":[],"auditorTenures":{"totalTracked":100000,"currentAuditors":5000,"tenuresOver10Years":2000,"tenuresOver7Years":5000,"avgTenureYears":4.5}}""");
         using var client = TestHelper.CreateClient(handler);
 
         var result = await client.Dashboard.GetAsync();
 
         Assert.Equal(500000, result.Data.TotalCompanies);
-        Assert.Equal(85.5, result.Data.CompletenessPct);
-        Assert.Equal(100000, result.AuditorTenures.TotalTenures);
+        Assert.Equal(400000, result.Data.EnrichedCompanies);
+        Assert.Equal(100000, result.AuditorTenures.TotalTracked);
     }
 
     // -- Screening resource tests --
@@ -866,8 +866,267 @@ public class VynCoClientTests
     }
 
     [Fact]
-    public void SdkVersion_Is2()
+    public void SdkVersion_Is3()
     {
-        Assert.Equal("2.0.0", VynCoClient.SdkVersion);
+        Assert.Equal("3.0.0", VynCoClient.SdkVersion);
+    }
+
+    // -- Companies new endpoint tests --
+
+    [Fact]
+    public async Task Companies_GetFull_ReturnsFullResponse()
+    {
+        var handler = new MockHttpHandler(HttpStatusCode.OK,
+            """{"company":{"uid":"CHE-123.456.789","name":"Test AG"},"persons":[{"personId":"p-1","role":"CEO"}],"recentChanges":[],"relationships":[]}""");
+        using var client = TestHelper.CreateClient(handler);
+
+        var result = await client.Companies.GetFullAsync("CHE-123.456.789");
+
+        Assert.Equal("CHE-123.456.789", result.Company.Uid);
+        Assert.Single(result.Persons);
+        Assert.Equal("CEO", result.Persons[0].Role);
+        Assert.Contains("/v1/companies/CHE-123.456.789/full", handler.LastRequest!.RequestUri!.ToString());
+    }
+
+    [Fact]
+    public async Task Companies_Classification_ReturnsClassification()
+    {
+        var handler = new MockHttpHandler(HttpStatusCode.OK,
+            """{"companyUid":"CHE-123.456.789","sectorName":"Financials","method":"noga","classifiedAt":"2024-01-01","isFinmaRegulated":true}""");
+        using var client = TestHelper.CreateClient(handler);
+
+        var result = await client.Companies.ClassificationAsync("CHE-123.456.789");
+
+        Assert.Equal("CHE-123.456.789", result.CompanyUid);
+        Assert.True(result.IsFinmaRegulated);
+        Assert.Contains("/v1/companies/CHE-123.456.789/classification", handler.LastRequest!.RequestUri!.ToString());
+    }
+
+    [Fact]
+    public async Task Companies_Structure_ReturnsStructure()
+    {
+        var handler = new MockHttpHandler(HttpStatusCode.OK,
+            """{"headOffices":[{"uid":"CHE-1","name":"Head AG"}],"branchOffices":[],"acquisitions":[],"acquiredBy":[]}""");
+        using var client = TestHelper.CreateClient(handler);
+
+        var result = await client.Companies.StructureAsync("CHE-123.456.789");
+
+        Assert.Single(result.HeadOffices);
+        Assert.Equal("Head AG", result.HeadOffices[0].Name);
+        Assert.Contains("/v1/companies/CHE-123.456.789/structure", handler.LastRequest!.RequestUri!.ToString());
+    }
+
+    [Fact]
+    public async Task Companies_Acquisitions_ReturnsList()
+    {
+        var handler = new MockHttpHandler(HttpStatusCode.OK,
+            """[{"acquirerUid":"CHE-1","acquiredUid":"CHE-2","acquirerName":"Big AG","acquiredName":"Small AG","createdAt":"2024-01-01"}]""");
+        using var client = TestHelper.CreateClient(handler);
+
+        var result = await client.Companies.AcquisitionsAsync("CHE-123.456.789");
+
+        Assert.Single(result);
+        Assert.Equal("Big AG", result[0].AcquirerName);
+    }
+
+    [Fact]
+    public async Task Companies_Notes_ReturnsList()
+    {
+        var handler = new MockHttpHandler(HttpStatusCode.OK,
+            """[{"id":"n-1","companyUid":"CHE-1","content":"Good company","noteType":"general","isPrivate":false,"createdAt":"2024-01-01","updatedAt":"2024-01-01"}]""");
+        using var client = TestHelper.CreateClient(handler);
+
+        var result = await client.Companies.NotesAsync("CHE-1");
+
+        Assert.Single(result);
+        Assert.Equal("Good company", result[0].Content);
+    }
+
+    [Fact]
+    public async Task Companies_CreateNote_SendsPost()
+    {
+        var handler = new MockHttpHandler(HttpStatusCode.Created,
+            """{"id":"n-1","companyUid":"CHE-1","content":"New note","noteType":"general","isPrivate":false,"createdAt":"2024-01-01","updatedAt":"2024-01-01"}""");
+        using var client = TestHelper.CreateClient(handler);
+
+        var result = await client.Companies.CreateNoteAsync("CHE-1",
+            new CreateNoteRequest { Content = "New note" });
+
+        Assert.Equal("New note", result.Content);
+        Assert.Equal(HttpMethod.Post, handler.LastRequest!.Method);
+        Assert.Contains("/v1/companies/CHE-1/notes", handler.LastRequest.RequestUri!.ToString());
+    }
+
+    [Fact]
+    public async Task Companies_UpdateNote_SendsPut()
+    {
+        var handler = new MockHttpHandler(HttpStatusCode.OK,
+            """{"id":"n-1","companyUid":"CHE-1","content":"Updated","noteType":"general","isPrivate":false,"createdAt":"2024-01-01","updatedAt":"2024-01-02"}""");
+        using var client = TestHelper.CreateClient(handler);
+
+        var result = await client.Companies.UpdateNoteAsync("CHE-1", "n-1",
+            new UpdateNoteRequest { Content = "Updated" });
+
+        Assert.Equal("Updated", result.Content);
+        Assert.Equal(HttpMethod.Put, handler.LastRequest!.Method);
+    }
+
+    [Fact]
+    public async Task Companies_DeleteNote_SendsDelete()
+    {
+        var handler = new MockHttpHandler(HttpStatusCode.NoContent, "");
+        using var client = TestHelper.CreateClient(handler);
+
+        await client.Companies.DeleteNoteAsync("CHE-1", "n-1");
+
+        Assert.Equal(HttpMethod.Delete, handler.LastRequest!.Method);
+        Assert.Contains("/v1/companies/CHE-1/notes/n-1", handler.LastRequest.RequestUri!.ToString());
+    }
+
+    [Fact]
+    public async Task Companies_Tags_ReturnsList()
+    {
+        var handler = new MockHttpHandler(HttpStatusCode.OK,
+            """[{"id":"t-1","companyUid":"CHE-1","tagName":"VIP","color":"#ff0000","createdAt":"2024-01-01"}]""");
+        using var client = TestHelper.CreateClient(handler);
+
+        var result = await client.Companies.TagsAsync("CHE-1");
+
+        Assert.Single(result);
+        Assert.Equal("VIP", result[0].TagName);
+    }
+
+    [Fact]
+    public async Task Companies_CreateTag_SendsPost()
+    {
+        var handler = new MockHttpHandler(HttpStatusCode.Created,
+            """{"id":"t-1","companyUid":"CHE-1","tagName":"VIP","color":"#ff0000","createdAt":"2024-01-01"}""");
+        using var client = TestHelper.CreateClient(handler);
+
+        var result = await client.Companies.CreateTagAsync("CHE-1",
+            new CreateTagRequest { TagName = "VIP", Color = "#ff0000" });
+
+        Assert.Equal("VIP", result.TagName);
+        Assert.Equal(HttpMethod.Post, handler.LastRequest!.Method);
+    }
+
+    [Fact]
+    public async Task Companies_DeleteTag_SendsDelete()
+    {
+        var handler = new MockHttpHandler(HttpStatusCode.NoContent, "");
+        using var client = TestHelper.CreateClient(handler);
+
+        await client.Companies.DeleteTagAsync("CHE-1", "t-1");
+
+        Assert.Equal(HttpMethod.Delete, handler.LastRequest!.Method);
+        Assert.Contains("/v1/companies/CHE-1/tags/t-1", handler.LastRequest.RequestUri!.ToString());
+    }
+
+    [Fact]
+    public async Task Companies_AllTags_ReturnsList()
+    {
+        var handler = new MockHttpHandler(HttpStatusCode.OK,
+            """[{"tagName":"VIP","count":10},{"tagName":"Risk","count":5}]""");
+        using var client = TestHelper.CreateClient(handler);
+
+        var result = await client.Companies.AllTagsAsync();
+
+        Assert.Equal(2, result.Count);
+        Assert.Equal("VIP", result[0].TagName);
+        Assert.Contains("/v1/tags", handler.LastRequest!.RequestUri!.ToString());
+    }
+
+    [Fact]
+    public async Task Companies_List_IncludesNewFilterParams()
+    {
+        var json = """{"items":[],"total":0,"page":1,"pageSize":10}""";
+        var handler = new MockHttpHandler(HttpStatusCode.OK, json);
+        using var client = TestHelper.CreateClient(handler);
+
+        await client.Companies.ListAsync(new CompanyListParams
+        {
+            Status = "active",
+            LegalForm = "AG",
+            CapitalMin = 100000,
+            AuditorCategory = "Big4",
+            SortBy = "name",
+            SortDesc = true,
+        });
+
+        var uri = handler.LastRequest!.RequestUri!.ToString();
+        Assert.Contains("status=active", uri);
+        Assert.Contains("legalForm=AG", uri);
+        Assert.Contains("capitalMin=100000", uri);
+        Assert.Contains("auditorCategory=Big4", uri);
+        Assert.Contains("sortBy=name", uri);
+        Assert.Contains("sortDesc=true", uri);
+    }
+
+    // -- Persons new endpoint tests --
+
+    [Fact]
+    public async Task Persons_Search_BuildsQuery()
+    {
+        var handler = new MockHttpHandler(HttpStatusCode.OK,
+            """{"items":[{"id":"p-1","fullName":"Hans Müller","roleCount":3}],"total":1,"page":1,"pageSize":25}""");
+        using var client = TestHelper.CreateClient(handler);
+
+        var result = await client.Persons.SearchAsync(new PersonSearchParams { Q = "Hans", Page = 1 });
+
+        Assert.Single(result.Items);
+        Assert.Equal("Hans Müller", result.Items[0].FullName);
+        var uri = handler.LastRequest!.RequestUri!.ToString();
+        Assert.Contains("q=Hans", uri);
+        Assert.Contains("page=1", uri);
+    }
+
+    [Fact]
+    public async Task Persons_Get_ReturnsDetail()
+    {
+        var handler = new MockHttpHandler(HttpStatusCode.OK,
+            """{"id":"p-1","fullName":"Hans Müller","firstName":"Hans","lastName":"Müller","roles":[{"companyUid":"CHE-1","roleFunction":"CEO","roleCategory":"Executive","isCurrent":true}]}""");
+        using var client = TestHelper.CreateClient(handler);
+
+        var result = await client.Persons.GetAsync("p-1");
+
+        Assert.Equal("Hans Müller", result.FullName);
+        Assert.Single(result.Roles);
+        Assert.Equal("CEO", result.Roles[0].RoleFunction);
+        Assert.Contains("/v1/persons/p-1", handler.LastRequest!.RequestUri!.ToString());
+    }
+
+    // -- Dossiers new endpoint tests --
+
+    [Fact]
+    public async Task Dossiers_Generate_SendsPost()
+    {
+        var handler = new MockHttpHandler(HttpStatusCode.OK,
+            """{"id":"d-1","userId":"u-1","companyUid":"CHE-123.456.789","companyName":"Test AG","level":"standard","content":"Generated...","sources":[],"createdAt":"2024-01-01"}""");
+        using var client = TestHelper.CreateClient(handler);
+
+        var result = await client.Dossiers.GenerateAsync("CHE-123.456.789");
+
+        Assert.Equal("d-1", result.Id);
+        Assert.Equal("Generated...", result.Content);
+        Assert.Equal(HttpMethod.Post, handler.LastRequest!.Method);
+        Assert.Contains("/v1/dossiers/CHE-123.456.789/generate", handler.LastRequest.RequestUri!.ToString());
+    }
+
+    // -- Teams new endpoint tests --
+
+    [Fact]
+    public async Task Teams_Join_SendsPost()
+    {
+        var handler = new MockHttpHandler(HttpStatusCode.OK,
+            """{"teamId":"t-1","teamName":"My Team","role":"Member"}""");
+        using var client = TestHelper.CreateClient(handler);
+
+        var result = await client.Teams.JoinAsync(new JoinTeamRequest { Token = "tok_abc" });
+
+        Assert.Equal("t-1", result.TeamId);
+        Assert.Equal("My Team", result.TeamName);
+        Assert.Equal(HttpMethod.Post, handler.LastRequest!.Method);
+        Assert.Contains("/v1/teams/join", handler.LastRequest.RequestUri!.ToString());
+        Assert.Contains("tok_abc", handler.LastRequestBody);
     }
 }

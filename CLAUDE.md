@@ -15,7 +15,7 @@ Tests target `net10.0` only. The SDK targets `netstandard2.0` and `net10.0` — 
 
 ## Architecture
 
-This is a .NET SDK wrapping the VynCo Swiss Corporate Intelligence REST API (`https://api.vynco.ch/v1/*`). It follows the same resource-based pattern as the [Rust SDK](https://github.com/VynCorp/vc-rust).
+This is a .NET SDK wrapping the VynCo Swiss Corporate Intelligence REST API (`https://vynco.ch/api/v1/*`). It follows the same resource-based pattern as the [Rust SDK](https://github.com/VynCorp/vc-rust).
 
 **Core pattern:** `VynCoClient` owns an `HttpClient` and exposes 18 resource properties. Each resource class holds a reference to the client and delegates HTTP calls to `VynCoClient.RequestAsync<T>()` internal methods, which handle serialization, retry, error mapping, and response header capture.
 
@@ -39,7 +39,7 @@ VynCoClient (entry point, IDisposable)
 - All DTOs use explicit `[JsonPropertyName("camelCase")]` — the backend uses camelCase (not snake_case)
 - `PropertyNamingPolicy = null` in serializer options — never rely on automatic naming
 - Error responses are RFC 7807 `ProblemDetails`
-- Retry with exponential backoff on 429 and 5xx: `500ms * 2^attempt`
+- Retry with exponential backoff on 429 and 5xx: `500ms * 2^attempt`, falls back to `X-RateLimit-Reset` when `Retry-After` absent, capped at 60s
 - `ConfigureAwait(false)` on all awaits (library code)
 - `#if NET8_0_OR_GREATER` guards on `ReadAsStringAsync(ct)` and `ReadAsByteArrayAsync(ct)` overloads for netstandard2.0 compat
 - Response headers (`X-Credits-Used`, `X-Credits-Remaining`, `X-Request-Id`, `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, `X-Data-Source`) captured into `LastResponseHeaders` after every request

@@ -55,13 +55,27 @@ public class UpdateMemberRoleRequest
     [JsonPropertyName("role")] public string Role { get; set; } = "";
 }
 
+/// <summary>Request body for joining a team via invitation token.</summary>
+public class JoinTeamRequest
+{
+    [JsonPropertyName("token")] public string Token { get; set; } = "";
+}
+
+/// <summary>Response from joining a team.</summary>
+public class JoinTeamResponse
+{
+    [JsonPropertyName("teamId")] public string TeamId { get; set; } = "";
+    [JsonPropertyName("teamName")] public string TeamName { get; set; } = "";
+    [JsonPropertyName("role")] public string Role { get; set; } = "";
+}
+
 /// <summary>Billing summary for a team.</summary>
 public class BillingSummary
 {
     [JsonPropertyName("tier")] public string Tier { get; set; } = "";
     [JsonPropertyName("creditBalance")] public int CreditBalance { get; set; }
     [JsonPropertyName("monthlyCredits")] public long MonthlyCredits { get; set; }
-    [JsonPropertyName("usedThisMonth")] public int UsedThisMonth { get; set; }
+    [JsonPropertyName("usedThisMonth")] public long UsedThisMonth { get; set; }
     [JsonPropertyName("members")] public List<MemberUsage> Members { get; set; } = new();
 }
 
@@ -70,5 +84,5 @@ public class MemberUsage
 {
     [JsonPropertyName("userId")] public string UserId { get; set; } = "";
     [JsonPropertyName("name")] public string Name { get; set; } = "";
-    [JsonPropertyName("creditsUsed")] public int CreditsUsed { get; set; }
+    [JsonPropertyName("creditsUsed")] public long CreditsUsed { get; set; }
 }
