@@ -51,4 +51,39 @@ public class AnalyticsResource
 
         return _client.RequestAsync<PagedResponse<AuditCandidate>>(HttpMethod.Get, $"/v1/analytics/candidates{query}", ct);
     }
+
+    /// <summary>
+    /// Market flow analytics — registrations and dissolutions over time (v3.1+).
+    /// Period: <c>monthly</c> (default) / <c>quarterly</c> / <c>yearly</c>.
+    /// GroupBy: <c>canton</c> (default) / <c>industry</c> / <c>legalForm</c>.
+    /// </summary>
+    public Task<FlowsResponse> FlowsAsync(FlowsParams? @params = null, CancellationToken ct = default)
+    {
+        var qs = new List<string>();
+        if (@params?.Period is not null) qs.Add($"period={Uri.EscapeDataString(@params.Period)}");
+        if (@params?.Since is not null) qs.Add($"since={Uri.EscapeDataString(@params.Since)}");
+        if (@params?.GroupBy is not null) qs.Add($"groupBy={Uri.EscapeDataString(@params.GroupBy)}");
+        var query = qs.Count > 0 ? "?" + string.Join("&", qs) : "";
+        return _client.RequestAsync<FlowsResponse>(HttpMethod.Get, $"/v1/analytics/flows{query}", ct);
+    }
+
+    /// <summary>Canton migration analytics — companies moving their legal seat between cantons (v3.1+).</summary>
+    public Task<MigrationResponse> MigrationsAsync(MigrationsParams? @params = null, CancellationToken ct = default)
+    {
+        var query = @params?.Since is not null ? $"?since={Uri.EscapeDataString(@params.Since)}" : "";
+        return _client.RequestAsync<MigrationResponse>(HttpMethod.Get, $"/v1/analytics/migrations{query}", ct);
+    }
+
+    /// <summary>
+    /// Benchmark a company against its industry peers (v3.1+).
+    /// Returns percentile ranks for dimensions such as capital, board_size,
+    /// change_frequency, and company_age.
+    /// </summary>
+    public Task<BenchmarkResponse> BenchmarkAsync(string uid, BenchmarkParams? @params = null, CancellationToken ct = default)
+    {
+        var qs = new List<string> { $"uid={Uri.EscapeDataString(uid)}" };
+        if (@params?.Dimensions is not null) qs.Add($"dimensions={Uri.EscapeDataString(@params.Dimensions)}");
+        var query = "?" + string.Join("&", qs);
+        return _client.RequestAsync<BenchmarkResponse>(HttpMethod.Get, $"/v1/analytics/benchmark{query}", ct);
+    }
 }

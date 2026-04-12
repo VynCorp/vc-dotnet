@@ -11,4 +11,8 @@ public class ScreeningResource
     /// <summary>Screen a company or entity against sanctions and compliance databases.</summary>
     public Task<ScreeningResponse> ScreenAsync(ScreeningRequest request, CancellationToken ct = default)
         => _client.RequestAsync<ScreeningResponse>(HttpMethod.Post, "/v1/screening", request, ct);
+
+    /// <summary>Screen up to 100 companies against sanctions lists in a single call (v3.1+).</summary>
+    public Task<BatchScreeningResponse> BatchAsync(BatchScreeningRequest request, CancellationToken ct = default)
+        => _client.RequestAsync<BatchScreeningResponse>(HttpMethod.Post, "/v1/screening/batch", request, ct);
 }

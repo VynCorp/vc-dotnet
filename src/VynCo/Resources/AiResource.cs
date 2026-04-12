@@ -19,4 +19,8 @@ public class AiResource
     /// <summary>Get an AI risk score for a company.</summary>
     public Task<RiskScoreResponse> RiskScoreAsync(RiskScoreRequest request, CancellationToken ct = default)
         => _client.RequestAsync<RiskScoreResponse>(HttpMethod.Post, "/v1/ai/risk-score", request, ct);
+
+    /// <summary>Get AI risk scores for up to 50 companies in a single call (v3.1+).</summary>
+    public Task<BatchRiskScoreResponse> RiskScoreBatchAsync(BatchRiskScoreRequest request, CancellationToken ct = default)
+        => _client.RequestAsync<BatchRiskScoreResponse>(HttpMethod.Post, "/v1/ai/risk-score/batch", request, ct);
 }

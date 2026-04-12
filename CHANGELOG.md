@@ -5,6 +5,80 @@ All notable changes to the VynCo .NET SDK will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.0] - 2026-04-12
+
+Alignment release matching the reference Python SDK (`vynco` v3.1.0), Rust SDK
+(`vynco` v2.3.0), and TypeScript SDK (`@vynco/sdk` v3.1.0). Adds the full v3.1
+API surface: historical timelines, UBO resolution, similar companies,
+media-with-sentiment, person-centric networks, market flow analytics, canton
+migrations, industry benchmarking, batch operations, and saved alerts.
+
+### Added
+
+**2 new resources:**
+
+- **`client.Alerts`** — saved queries with optional webhook delivery (`ListAsync`, `CreateAsync`, `DeleteAsync`)
+- **`client.Ownership`** — ownership-chain trace with circular-ownership detection (`TraceAsync`)
+
+**14 new methods on existing resources:**
+
+- `Companies.TimelineAsync(uid, params?)` — chronological event timeline
+- `Companies.TimelineSummaryAsync(uid, params?)` — AI-generated narrative summary
+- `Companies.SimilarAsync(uid, params?)` — similar-company scoring on industry/canton/capital/legal form/auditor tier
+- `Companies.UboAsync(uid)` — ultimate beneficial owner resolution
+- `Companies.MediaAsync(uid, params?)` — news items with optional sentiment filter
+- `Companies.MediaAnalyzeAsync(uid)` — trigger LLM sentiment analysis
+- `Companies.ExportCsvAsync(request)` — canonical CSV export (replaces `ExportExcelAsync`, kept as `[Obsolete]` alias)
+- `Persons.NetworkAsync(id)` — person-centric network (companies + co-directors + stats)
+- `Persons.BoardMembersPagedAsync(uid, params?)` — new paginated variant (unpaginated `BoardMembersAsync(uid)` unchanged)
+- `Analytics.FlowsAsync(params?)` — registration/dissolution flows over time
+- `Analytics.MigrationsAsync(params?)` — canton-to-canton legal-seat migrations
+- `Analytics.BenchmarkAsync(uid, params?)` — company vs industry-peer percentile ranks
+- `Screening.BatchAsync(request)` — batch sanctions screening (up to 100 UIDs)
+- `Ai.RiskScoreBatchAsync(request)` — batch AI risk scoring (up to 50 UIDs)
+
+**New model classes (40+):**
+
+- `HierarchyEntity` (replaces `JsonElement` on `HierarchyResponse.Parent/Subsidiaries/Siblings`)
+- Timeline: `TimelineParams`, `TimelineEvent`, `TimelineResponse`, `TimelineSummaryResponse`
+- Similar: `SimilarParams`, `SimilarCompanyResult`, `SimilarCompaniesResponse`
+- UBO/Ownership: `UboPerson`, `ChainLink`, `UboResponse`, `OwnershipRequest`, `OwnershipEntity`, `OwnershipLink`, `PersonCompanyRole`, `KeyPerson`, `CircularFlag`, `OwnershipResponse`
+- Media: `MediaParams`, `MediaItem`, `MediaResponse`, `MediaAnalysisResponse`
+- Alerts: `Alert`, `CreateAlertRequest`
+- Flows/Migrations/Benchmark: `FlowsParams`, `FlowDataPoint`, `FlowsResponse`, `MigrationsParams`, `MigrationFlow`, `MigrationResponse`, `BenchmarkParams`, `BenchmarkDimension`, `BenchmarkResponse`
+- Batch: `BatchScreeningRequest`, `BatchScreeningHitSummary`, `BatchScreeningResultByUid`, `BatchScreeningResponse`, `BatchRiskScoreRequest`, `RiskScoreResult`, `BatchRiskScoreResponse`
+- Person network: `NetworkPerson`, `NetworkCompany`, `CoDirectorCompany`, `CoDirector`, `NetworkStats`, `PersonNetworkResponse`, `BoardMemberParams`
+- Enriched watchlist: `WatchlistCompanyEntry`
+
+**Enrichment provenance fields** (all optional, backwards-compatible — populated by backend enrichment pipelines):
+
+- `Company.DirectParentLei`, `UltimateParentLei`, `UltimateParentName`, `GleifParentEnrichedAt` — GLEIF parent linkage
+- `Company.IndustrySource`, `IndustryConfidence`, `IndustryClassifiedAt` — industry-classification provenance
+- `Classification.IndustrySource`, `IndustryConfidence` — same on the classification endpoint
+- `Fingerprint.RegistrationDate` — Swiss register entry date
+- `BoardMember.RoleSource`, `RoleConfidence`, `RoleInferredAt` — role extraction provenance
+- `PersonRoleDetail`, `PersonEntry`, `NetworkCompany` — same role provenance fields
+
+**Data-coverage disclosure:**
+
+- `UboResponse.DataCoverageNote` — explains when chain is incomplete
+- `FlowsResponse.DataCoverageNote` — surfaces asymmetric-accuracy notes (e.g. historical dissolution under-counting)
+
+**Documentation:**
+
+- Non-Swiss GLEIF parents appear as synthetic `LEI:{20-char-lei}` identifiers on
+  `UboPerson.ControllingEntityUid`, `ChainLink.FromUid`/`ToUid`, and
+  `OwnershipLink.SourceUid`/`TargetUid`. Documented on each class.
+
+### Changed
+
+- `HierarchyResponse.Parent`/`Subsidiaries`/`Siblings` now use the typed `HierarchyEntity` class instead of `JsonElement` — typed-output improvement; callers that used `.GetProperty("name")` must switch to field access (`entity.Name`).
+- `WatchlistCompaniesResponse` now includes a `Companies: List<WatchlistCompanyEntry>` field alongside the existing `Uids`. The server populates it with name/status/canton for each watched company (eliminates an extra round trip).
+
+### Deprecated
+
+- `Companies.ExportExcelAsync(request)` — marked with `[Obsolete]` attribute. Kept as an alias for `ExportCsvAsync` (the endpoint has always returned CSV; the new name reflects reality). Will be removed in v4.0.
+
 ## [3.0.0] - 2026-04-08
 
 Major release aligned with the Rust SDK v2.2.0 and the production VynCo API.

@@ -52,28 +52,46 @@ Console.WriteLine($"Credits remaining: {credits.Balance}");
 
 ## API Coverage
 
-18 resource modules covering 86 endpoints:
+20 resource modules covering 100+ endpoints:
 
 | Resource | Methods |
 |----------|---------|
 | `client.Health` | `CheckAsync` |
-| `client.Companies` | `ListAsync`, `GetAsync`, `GetFullAsync`, `CountAsync`, `EventsAsync`, `StatisticsAsync`, `CompareAsync`, `NewsAsync`, `ReportsAsync`, `RelationshipsAsync`, `HierarchyAsync`, `ClassificationAsync`, `FingerprintAsync`, `StructureAsync`, `AcquisitionsAsync`, `NearbyAsync`, `NotesAsync`, `CreateNoteAsync`, `UpdateNoteAsync`, `DeleteNoteAsync`, `TagsAsync`, `CreateTagAsync`, `DeleteTagAsync`, `AllTagsAsync`, `ExportExcelAsync` |
+| `client.Companies` | `ListAsync`, `GetAsync`, `GetFullAsync`, `CountAsync`, `EventsAsync`, `StatisticsAsync`, `CompareAsync`, `NewsAsync`, `ReportsAsync`, `RelationshipsAsync`, `HierarchyAsync`, `ClassificationAsync`, `FingerprintAsync`, `StructureAsync`, `AcquisitionsAsync`, `NearbyAsync`, `TimelineAsync`, `TimelineSummaryAsync`, `SimilarAsync`, `UboAsync`, `MediaAsync`, `MediaAnalyzeAsync`, `NotesAsync`, `CreateNoteAsync`, `UpdateNoteAsync`, `DeleteNoteAsync`, `TagsAsync`, `CreateTagAsync`, `DeleteTagAsync`, `AllTagsAsync`, `ExportCsvAsync` |
 | `client.Auditors` | `HistoryAsync`, `TenuresAsync` |
 | `client.Dashboard` | `GetAsync` |
-| `client.Screening` | `ScreenAsync` |
+| `client.Screening` | `ScreenAsync`, `BatchAsync` |
 | `client.Watchlists` | `ListAsync`, `CreateAsync`, `DeleteAsync`, `CompaniesAsync`, `AddCompaniesAsync`, `RemoveCompanyAsync`, `EventsAsync` |
 | `client.Webhooks` | `ListAsync`, `CreateAsync`, `UpdateAsync`, `DeleteAsync`, `TestAsync`, `DeliveriesAsync` |
 | `client.Exports` | `CreateAsync`, `GetAsync`, `DownloadAsync` |
-| `client.Ai` | `DossierAsync`, `SearchAsync`, `RiskScoreAsync` |
+| `client.Ai` | `DossierAsync`, `SearchAsync`, `RiskScoreAsync`, `RiskScoreBatchAsync` |
 | `client.ApiKeys` | `ListAsync`, `CreateAsync`, `RevokeAsync` |
 | `client.Credits` | `BalanceAsync`, `UsageAsync`, `HistoryAsync` |
 | `client.Billing` | `CreateCheckoutAsync`, `CreatePortalAsync` |
 | `client.Teams` | `MeAsync`, `CreateAsync`, `MembersAsync`, `InviteMemberAsync`, `UpdateMemberRoleAsync`, `RemoveMemberAsync`, `BillingSummaryAsync`, `JoinAsync` |
 | `client.Changes` | `ListAsync`, `ByCompanyAsync`, `StatisticsAsync` |
-| `client.Persons` | `BoardMembersAsync`, `SearchAsync`, `GetAsync` |
-| `client.Analytics` | `CantonsAsync`, `AuditorsAsync`, `ClusterAsync`, `AnomaliesAsync`, `RfmSegmentsAsync`, `CohortsAsync`, `CandidatesAsync` |
+| `client.Persons` | `BoardMembersAsync`, `BoardMembersPagedAsync`, `SearchAsync`, `GetAsync`, `NetworkAsync` |
+| `client.Analytics` | `CantonsAsync`, `AuditorsAsync`, `ClusterAsync`, `AnomaliesAsync`, `RfmSegmentsAsync`, `CohortsAsync`, `CandidatesAsync`, `FlowsAsync`, `MigrationsAsync`, `BenchmarkAsync` |
 | `client.Dossiers` | `CreateAsync`, `ListAsync`, `GetAsync`, `DeleteAsync`, `GenerateAsync` |
 | `client.Graph` | `GetAsync`, `ExportAsync`, `AnalyzeAsync` |
+| `client.Alerts` | `ListAsync`, `CreateAsync`, `DeleteAsync` |
+| `client.Ownership` | `TraceAsync` |
+
+### New in v3.1
+
+- **Historical timeline** — `Companies.TimelineAsync(uid, params?)` and AI narrative via `TimelineSummaryAsync(...)`
+- **Similar companies** — `Companies.SimilarAsync(uid, { Limit })` scored on industry, canton, capital, legal form, auditor tier
+- **UBO resolution** — `Companies.UboAsync(uid)` walks the ownership chain and identifies natural persons
+- **Ownership trace** — `Ownership.TraceAsync(uid, { MaxDepth })` exposes the full chain with circular-ownership detection
+- **Media with sentiment** — `Companies.MediaAsync(uid, { Sentiment })` filtered by positive/neutral/negative
+- **Batch operations** — `Screening.BatchAsync(...)` (up to 100) and `Ai.RiskScoreBatchAsync(...)` (up to 50)
+- **Market analytics** — `Analytics.FlowsAsync(...)`, `Analytics.MigrationsAsync(...)`, `Analytics.BenchmarkAsync(uid, ...)`
+- **Person network** — `Persons.NetworkAsync(id)` for person-centric investigations with co-directors
+- **Saved alerts** — persistent saved queries with optional webhook delivery
+- **Pagination on board members** — new `Persons.BoardMembersPagedAsync(uid, { Page, PageSize })` (max 500)
+- **Typed hierarchy** — `HierarchyResponse` now uses `HierarchyEntity` (was `JsonElement`)
+- **Enriched watchlists** — `WatchlistCompaniesResponse.Companies` includes name/status/canton
+- **`ExportCsvAsync`** — new canonical name (`ExportExcelAsync` kept as `[Obsolete]` alias)
 
 ## Response Metadata
 

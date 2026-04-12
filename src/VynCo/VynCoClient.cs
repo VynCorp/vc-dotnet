@@ -16,7 +16,7 @@ public class VynCoClient : IDisposable
     private readonly int _maxRetries;
     private bool _disposed;
 
-    public const string SdkVersion = "3.0.0";
+    public const string SdkVersion = "3.1.0";
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -63,6 +63,10 @@ public class VynCoClient : IDisposable
     public DossiersResource Dossiers { get; }
     /// <summary>Graph resource — network graphs and analysis.</summary>
     public GraphResource Graph { get; }
+    /// <summary>Alerts resource — saved queries with optional webhook delivery (v3.1+).</summary>
+    public AlertsResource Alerts { get; }
+    /// <summary>Ownership resource — ownership-chain trace with circular-ownership detection (v3.1+).</summary>
+    public OwnershipResource Ownership { get; }
 
     /// <summary>Headers from the most recent API response (request-id, credits, rate-limit).</summary>
     public VynCoResponseHeaders? LastResponseHeaders { get; private set; }
@@ -98,6 +102,8 @@ public class VynCoClient : IDisposable
         Analytics = new AnalyticsResource(this);
         Dossiers = new DossiersResource(this);
         Graph = new GraphResource(this);
+        Alerts = new AlertsResource(this);
+        Ownership = new OwnershipResource(this);
     }
 
     // -- Internal request methods used by resources --

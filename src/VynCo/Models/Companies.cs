@@ -45,6 +45,22 @@ public class Company
     [JsonPropertyName("oldNames")] public List<string>? OldNames { get; set; }
     [JsonPropertyName("translations")] public List<string>? Translations { get; set; }
     [JsonPropertyName("updatedAt")] public string? UpdatedAt { get; set; }
+
+    // --- Enrichment provenance (v3.1+) ---
+    /// <summary>GLEIF-sourced direct parent LEI.</summary>
+    [JsonPropertyName("directParentLei")] public string? DirectParentLei { get; set; }
+    /// <summary>GLEIF-sourced ultimate parent LEI. Non-Swiss parents appear as <c>LEI:{20-char-lei}</c>.</summary>
+    [JsonPropertyName("ultimateParentLei")] public string? UltimateParentLei { get; set; }
+    /// <summary>Cached name of the ultimate parent.</summary>
+    [JsonPropertyName("ultimateParentName")] public string? UltimateParentName { get; set; }
+    /// <summary>Timestamp when GLEIF parent enrichment last ran.</summary>
+    [JsonPropertyName("gleifParentEnrichedAt")] public string? GleifParentEnrichedAt { get; set; }
+    /// <summary>Source of the industry classification: <c>zefix</c>, <c>keyword_match</c>, or <c>llm</c>.</summary>
+    [JsonPropertyName("industrySource")] public string? IndustrySource { get; set; }
+    /// <summary>Confidence (0–1) for LLM-classified industries.</summary>
+    [JsonPropertyName("industryConfidence")] public double? IndustryConfidence { get; set; }
+    /// <summary>Timestamp when the industry classification was last computed.</summary>
+    [JsonPropertyName("industryClassifiedAt")] public string? IndustryClassifiedAt { get; set; }
 }
 
 public class CompanyCount
@@ -153,12 +169,22 @@ public class Relationship
     [JsonPropertyName("sharedPersons")] public List<string> SharedPersons { get; set; } = new();
 }
 
+/// <summary>A company entity in a hierarchy response.</summary>
+public class HierarchyEntity
+{
+    [JsonPropertyName("uid")] public string Uid { get; set; } = "";
+    [JsonPropertyName("name")] public string Name { get; set; } = "";
+    [JsonPropertyName("confidence")] public string? Confidence { get; set; }
+    [JsonPropertyName("sharedPersonCount")] public long? SharedPersonCount { get; set; }
+    [JsonPropertyName("sharedPersons")] public List<string>? SharedPersons { get; set; }
+}
+
 /// <summary>Corporate hierarchy response.</summary>
 public class HierarchyResponse
 {
-    [JsonPropertyName("parent")] public JsonElement? Parent { get; set; }
-    [JsonPropertyName("subsidiaries")] public List<JsonElement> Subsidiaries { get; set; } = new();
-    [JsonPropertyName("siblings")] public List<JsonElement> Siblings { get; set; } = new();
+    [JsonPropertyName("parent")] public HierarchyEntity? Parent { get; set; }
+    [JsonPropertyName("subsidiaries")] public List<HierarchyEntity> Subsidiaries { get; set; } = new();
+    [JsonPropertyName("siblings")] public List<HierarchyEntity> Siblings { get; set; } = new();
 }
 
 /// <summary>Company data fingerprint.</summary>
@@ -185,6 +211,8 @@ public class Fingerprint
     [JsonPropertyName("subsidiaryCount")] public long SubsidiaryCount { get; set; }
     [JsonPropertyName("generatedAt")] public string GeneratedAt { get; set; } = "";
     [JsonPropertyName("fingerprintVersion")] public string FingerprintVersion { get; set; } = "";
+    /// <summary>Swiss register entry date (v3.1+).</summary>
+    [JsonPropertyName("registrationDate")] public string? RegistrationDate { get; set; }
 }
 
 /// <summary>Query parameters for finding nearby companies.</summary>
@@ -224,6 +252,10 @@ public class PersonEntry
     [JsonPropertyName("role")] public string Role { get; set; } = "";
     [JsonPropertyName("since")] public string? Since { get; set; }
     [JsonPropertyName("until")] public string? Until { get; set; }
+    // --- Enrichment provenance (v3.1+) ---
+    [JsonPropertyName("roleSource")] public string? RoleSource { get; set; }
+    [JsonPropertyName("roleConfidence")] public double? RoleConfidence { get; set; }
+    [JsonPropertyName("roleInferredAt")] public string? RoleInferredAt { get; set; }
 }
 
 /// <summary>A change entry in a company full response.</summary>
@@ -263,6 +295,9 @@ public class Classification
     [JsonPropertyName("classifiedAt")] public string ClassifiedAt { get; set; } = "";
     [JsonPropertyName("auditorCategory")] public string? AuditorCategory { get; set; }
     [JsonPropertyName("isFinmaRegulated")] public bool IsFinmaRegulated { get; set; }
+    // --- Enrichment provenance (v3.1+) ---
+    [JsonPropertyName("industrySource")] public string? IndustrySource { get; set; }
+    [JsonPropertyName("industryConfidence")] public double? IndustryConfidence { get; set; }
 }
 
 /// <summary>Corporate structure with head/branch offices and acquisitions.</summary>

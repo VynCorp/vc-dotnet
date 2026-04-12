@@ -132,7 +132,73 @@ public class CompaniesResource
     public Task<List<TagSummary>> AllTagsAsync(CancellationToken ct = default)
         => _client.RequestListAsync<TagSummary>(HttpMethod.Get, "/v1/tags", ct);
 
-    /// <summary>Export companies to Excel.</summary>
-    public Task<ExportFile> ExportExcelAsync(ExcelExportRequest request, CancellationToken ct = default)
+    // -- Timeline (v3.1+) --
+
+    /// <summary>Get a chronological timeline of a company's changes.</summary>
+    public Task<TimelineResponse> TimelineAsync(string uid, TimelineParams? @params = null, CancellationToken ct = default)
+    {
+        var qs = new List<string>();
+        if (@params?.Since is not null) qs.Add($"since={Uri.EscapeDataString(@params.Since)}");
+        if (@params?.Until is not null) qs.Add($"until={Uri.EscapeDataString(@params.Until)}");
+        if (@params?.ChangeType is not null) qs.Add($"changeType={Uri.EscapeDataString(@params.ChangeType)}");
+        var query = qs.Count > 0 ? "?" + string.Join("&", qs) : "";
+        return _client.RequestAsync<TimelineResponse>(HttpMethod.Get, $"/v1/companies/{Uri.EscapeDataString(uid)}/timeline{query}", ct);
+    }
+
+    /// <summary>Get an AI-generated narrative summary of a company timeline.</summary>
+    public Task<TimelineSummaryResponse> TimelineSummaryAsync(string uid, TimelineParams? @params = null, CancellationToken ct = default)
+    {
+        var qs = new List<string>();
+        if (@params?.Since is not null) qs.Add($"since={Uri.EscapeDataString(@params.Since)}");
+        if (@params?.Until is not null) qs.Add($"until={Uri.EscapeDataString(@params.Until)}");
+        if (@params?.ChangeType is not null) qs.Add($"changeType={Uri.EscapeDataString(@params.ChangeType)}");
+        var query = qs.Count > 0 ? "?" + string.Join("&", qs) : "";
+        return _client.RequestAsync<TimelineSummaryResponse>(HttpMethod.Get, $"/v1/companies/{Uri.EscapeDataString(uid)}/timeline/summary{query}", ct);
+    }
+
+    // -- Similar companies (v3.1+) --
+
+    /// <summary>Find companies scored by similarity on industry (40pts), canton (20pts), capital (20pts), legal form (10pts), and auditor tier (10pts).</summary>
+    public Task<SimilarCompaniesResponse> SimilarAsync(string uid, SimilarParams? @params = null, CancellationToken ct = default)
+    {
+        var query = @params?.Limit is not null ? $"?limit={@params.Limit}" : "";
+        return _client.RequestAsync<SimilarCompaniesResponse>(HttpMethod.Get, $"/v1/companies/{Uri.EscapeDataString(uid)}/similar{query}", ct);
+    }
+
+    // -- UBO (v3.1+) --
+
+    /// <summary>Resolve the ultimate beneficial owner(s) of a company.</summary>
+    public Task<UboResponse> UboAsync(string uid, CancellationToken ct = default)
+        => _client.RequestAsync<UboResponse>(HttpMethod.Get, $"/v1/companies/{Uri.EscapeDataString(uid)}/ubo", ct);
+
+    // -- Media / News with sentiment (v3.1+) --
+
+    /// <summary>Get media/news items for a company, optionally filtered by sentiment (<c>positive</c>, <c>neutral</c>, <c>negative</c>).</summary>
+    public Task<MediaResponse> MediaAsync(string uid, MediaParams? @params = null, CancellationToken ct = default)
+    {
+        var qs = new List<string>();
+        if (@params?.Sentiment is not null) qs.Add($"sentiment={Uri.EscapeDataString(@params.Sentiment)}");
+        if (@params?.Since is not null) qs.Add($"since={Uri.EscapeDataString(@params.Since)}");
+        if (@params?.Limit is not null) qs.Add($"limit={@params.Limit}");
+        var query = qs.Count > 0 ? "?" + string.Join("&", qs) : "";
+        return _client.RequestAsync<MediaResponse>(HttpMethod.Get, $"/v1/companies/{Uri.EscapeDataString(uid)}/media{query}", ct);
+    }
+
+    /// <summary>Trigger LLM sentiment analysis on unanalyzed media items for a company.</summary>
+    public Task<MediaAnalysisResponse> MediaAnalyzeAsync(string uid, CancellationToken ct = default)
+        => _client.RequestAsync<MediaAnalysisResponse>(HttpMethod.Post, $"/v1/companies/{Uri.EscapeDataString(uid)}/media/analyze", ct);
+
+    // -- CSV / Excel export --
+
+    /// <summary>
+    /// Export companies as CSV. This is the canonical name (v3.1+); the server currently emits <c>text/csv</c>.
+    /// The legacy <see cref="ExportExcelAsync"/> is kept as a deprecated alias.
+    /// </summary>
+    public Task<ExportFile> ExportCsvAsync(ExcelExportRequest request, CancellationToken ct = default)
         => _client.RequestBytesAsync("/v1/companies/export/excel", request, ct);
+
+    /// <summary>Deprecated: use <see cref="ExportCsvAsync"/> instead. The server returns CSV, not Excel.</summary>
+    [Obsolete("Use ExportCsvAsync instead. The server returns CSV, not Excel.")]
+    public Task<ExportFile> ExportExcelAsync(ExcelExportRequest request, CancellationToken ct = default)
+        => ExportCsvAsync(request, ct);
 }
