@@ -34,6 +34,14 @@ public class ExportDownload
     [JsonPropertyName("data")] public string? Data { get; set; }
 }
 
+/// <summary>Request body for bulk profile export.</summary>
+public class BulkProfilesRequest
+{
+    [JsonPropertyName("uids")] public List<string> Uids { get; set; } = new();
+    [JsonPropertyName("includeTimeline")] public bool? IncludeTimeline { get; set; }
+    [JsonPropertyName("includeBoard")] public bool? IncludeBoard { get; set; }
+}
+
 /// <summary>Downloaded export file (raw bytes + metadata).</summary>
 public class ExportFile
 {

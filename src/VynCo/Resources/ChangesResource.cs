@@ -34,4 +34,13 @@ public class ChangesResource
     /// <summary>Mark a change as reviewed (compliance workflow).</summary>
     public Task ReviewAsync(string id, CancellationToken ct = default)
         => _client.RequestVoidAsync(HttpMethod.Put, $"/v1/changes/{Uri.EscapeDataString(id)}/review", ct);
+
+    /// <summary>Get a field-level diff for a company between two dates.</summary>
+    public Task<CompanyDiffResponse> DiffAsync(string uid, string since, string? until = null, CancellationToken ct = default)
+    {
+        var qs = new List<string> { $"since={Uri.EscapeDataString(since)}" };
+        if (until is not null) qs.Add($"until={Uri.EscapeDataString(until)}");
+        var query = "?" + string.Join("&", qs);
+        return _client.RequestAsync<CompanyDiffResponse>(HttpMethod.Get, $"/v1/companies/{Uri.EscapeDataString(uid)}/diff{query}", ct);
+    }
 }

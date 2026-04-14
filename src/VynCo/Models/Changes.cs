@@ -36,3 +36,23 @@ public class ChangeListParams
     public long? Page { get; set; }
     public long? PageSize { get; set; }
 }
+
+/// <summary>A single field-level change in a company diff.</summary>
+public class DiffEntry
+{
+    [JsonPropertyName("field")] public string Field { get; set; } = "";
+    [JsonPropertyName("from")] public string? From { get; set; }
+    [JsonPropertyName("to")] public string? To { get; set; }
+    [JsonPropertyName("changedAt")] public string ChangedAt { get; set; } = "";
+    [JsonPropertyName("changeType")] public string ChangeType { get; set; } = "";
+}
+
+/// <summary>Response for a company diff request.</summary>
+public class CompanyDiffResponse
+{
+    [JsonPropertyName("uid")] public string Uid { get; set; } = "";
+    [JsonPropertyName("since")] public string Since { get; set; } = "";
+    [JsonPropertyName("until")] public string Until { get; set; } = "";
+    [JsonPropertyName("changes")] public List<DiffEntry> Changes { get; set; } = new();
+    [JsonPropertyName("totalChanges")] public long TotalChanges { get; set; }
+}

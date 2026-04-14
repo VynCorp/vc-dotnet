@@ -25,6 +25,9 @@ public class CompaniesResource
         if (@params?.SortDesc is not null) qs.Add($"sortDesc={@params.SortDesc.Value.ToString().ToLowerInvariant()}");
         if (@params?.Page is not null) qs.Add($"page={@params.Page}");
         if (@params?.PageSize is not null) qs.Add($"pageSize={@params.PageSize}");
+        if (@params?.Lei is not null) qs.Add($"lei={Uri.EscapeDataString(@params.Lei)}");
+        if (@params?.Duns is not null) qs.Add($"duns={Uri.EscapeDataString(@params.Duns)}");
+        if (@params?.Isin is not null) qs.Add($"isin={Uri.EscapeDataString(@params.Isin)}");
         var query = qs.Count > 0 ? "?" + string.Join("&", qs) : "";
 
         return _client.RequestAsync<PagedResponse<Company>>(HttpMethod.Get, $"/v1/companies{query}", ct);

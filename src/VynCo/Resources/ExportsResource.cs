@@ -16,6 +16,10 @@ public class ExportsResource
     public Task<ExportDownload> GetAsync(string id, CancellationToken ct = default)
         => _client.RequestAsync<ExportDownload>(HttpMethod.Get, $"/v1/exports/{Uri.EscapeDataString(id)}", ct);
 
+    /// <summary>Create a bulk profile export job.</summary>
+    public Task<ExportJob> BulkProfilesAsync(BulkProfilesRequest request, CancellationToken ct = default)
+        => _client.RequestAsync<ExportJob>(HttpMethod.Post, "/v1/exports/bulk-profiles", request, ct);
+
     /// <summary>Download the exported file as raw bytes.</summary>
     public Task<ExportFile> DownloadAsync(string id, CancellationToken ct = default)
         => _client.RequestBytesAsync($"/v1/exports/{Uri.EscapeDataString(id)}/download", ct);

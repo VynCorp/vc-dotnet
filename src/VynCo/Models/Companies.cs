@@ -61,6 +61,14 @@ public class Company
     [JsonPropertyName("industryConfidence")] public double? IndustryConfidence { get; set; }
     /// <summary>Timestamp when the industry classification was last computed.</summary>
     [JsonPropertyName("industryClassifiedAt")] public string? IndustryClassifiedAt { get; set; }
+
+    // --- External identifiers ---
+    /// <summary>Legal Entity Identifier.</summary>
+    [JsonPropertyName("lei")] public string? Lei { get; set; }
+    /// <summary>D-U-N-S Number.</summary>
+    [JsonPropertyName("duns")] public string? Duns { get; set; }
+    /// <summary>International Securities Identification Number.</summary>
+    [JsonPropertyName("isin")] public string? Isin { get; set; }
 }
 
 public class CompanyCount
@@ -91,6 +99,9 @@ public class CompanyListParams
     public bool? SortDesc { get; set; }
     public long? Page { get; set; }
     public long? PageSize { get; set; }
+    public string? Lei { get; set; }
+    public string? Duns { get; set; }
+    public string? Isin { get; set; }
 }
 
 /// <summary>Response wrapper for event listing.</summary>
