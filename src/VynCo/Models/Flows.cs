@@ -62,9 +62,11 @@ public class BenchmarkParams
 public class BenchmarkDimension
 {
     [JsonPropertyName("name")] public string Name { get; set; } = "";
-    [JsonPropertyName("companyValue")] public double CompanyValue { get; set; }
-    [JsonPropertyName("industryMedian")] public double IndustryMedian { get; set; }
-    [JsonPropertyName("percentile")] public double Percentile { get; set; }
+    [JsonPropertyName("companyValue")] public double? CompanyValue { get; set; }
+    [JsonPropertyName("industryMedian")] public double? IndustryMedian { get; set; }
+    [JsonPropertyName("percentile")] public double? Percentile { get; set; }
+    /// <summary>How many peers have non-null data for this dimension.</summary>
+    [JsonPropertyName("peersWithData")] public long? PeersWithData { get; set; }
 }
 
 /// <summary>Industry benchmarking response — how a company compares to peers (v3.1+).</summary>
