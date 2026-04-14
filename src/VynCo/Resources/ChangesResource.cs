@@ -30,4 +30,8 @@ public class ChangesResource
     /// <summary>Get change statistics.</summary>
     public Task<ChangeStatistics> StatisticsAsync(CancellationToken ct = default)
         => _client.RequestAsync<ChangeStatistics>(HttpMethod.Get, "/v1/changes/statistics", ct);
+
+    /// <summary>Mark a change as reviewed (compliance workflow).</summary>
+    public Task ReviewAsync(string id, CancellationToken ct = default)
+        => _client.RequestVoidAsync(HttpMethod.Put, $"/v1/changes/{Uri.EscapeDataString(id)}/review", ct);
 }

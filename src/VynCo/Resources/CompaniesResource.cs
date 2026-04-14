@@ -188,6 +188,12 @@ public class CompaniesResource
     public Task<MediaAnalysisResponse> MediaAnalyzeAsync(string uid, CancellationToken ct = default)
         => _client.RequestAsync<MediaAnalysisResponse>(HttpMethod.Post, $"/v1/companies/{Uri.EscapeDataString(uid)}/media/analyze", ct);
 
+    // -- PDF export --
+
+    /// <summary>Get structured company profile data suitable for PDF rendering.</summary>
+    public Task<PdfProfileResponse> PdfAsync(string uid, CancellationToken ct = default)
+        => _client.RequestAsync<PdfProfileResponse>(HttpMethod.Get, $"/v1/companies/{Uri.EscapeDataString(uid)}/pdf", ct);
+
     // -- CSV / Excel export --
 
     /// <summary>
