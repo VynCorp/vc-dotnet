@@ -868,7 +868,7 @@ public class VynCoClientTests
     [Fact]
     public void SdkVersion_Is3()
     {
-        Assert.Equal("3.2.0", VynCoClient.SdkVersion);
+        Assert.Equal("3.2.1", VynCoClient.SdkVersion);
     }
 
     // -- Companies new endpoint tests --

@@ -16,7 +16,7 @@ public class VynCoClient : IDisposable
     private readonly int _maxRetries;
     private bool _disposed;
 
-    public const string SdkVersion = "3.2.0";
+    public const string SdkVersion = "3.2.1";
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
